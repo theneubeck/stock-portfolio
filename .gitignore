@@ -1,0 +1,25 @@
+# Virtual environment
+.venv/
+
+# Caches
+__pycache__/
+*.pyc
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+
+# Coverage
+.coverage
+coverage.xml
+htmlcov/
+
+# uv
+uv.lock
+
+# OS
+.DS_Store
