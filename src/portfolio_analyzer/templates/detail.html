@@ -1,23 +1,27 @@
 {% extends "base.html" %}
-{% set active = "dashboard" %}
+{% set active = "portfolios" %}
 
-{% block title %}Portfolio Analysis — Dashboard{% endblock %}
+{% block title %}{{ data.meta.name }}{% endblock %}
+
+{% set bar_colors = ['#c45d3e', '#3b6b8a', '#4a8a7a', '#b89a6a', '#7a5e8a', '#8a6b4a'] %}
 
 {% block content %}
 
-{# ── Compute allocation colors ─────────────── #}
-{% set bar_colors = ['#c45d3e', '#3b6b8a', '#4a8a7a', '#b89a6a', '#7a5e8a', '#8a6b4a'] %}
-
-{# ── Helper: symbol display ────────────────── #}
-{# names dict passed from web.py: symbol → full name #}
+<!-- Breadcrumb -->
+<div style="margin-bottom:1.5rem;animation:fadeSlideIn 0.4s ease both;">
+  <a href="/" style="font-size:0.78rem;color:var(--ink-muted);text-decoration:none;font-weight:500;">← All Portfolios</a>
+</div>
 
 <!-- Page header -->
 <div class="page-header">
-  <h1>PORTFOLIO ANALYSIS</h1>
+  <h1>{{ data.meta.name }}</h1>
   <div class="subtitle">
-    {{ data.summary.num_holdings }} holdings &middot;
+    {{ data.summary.num_holdings }} holding{{ "s" if data.summary.num_holdings > 1 else "" }} &middot;
     Benchmark: {{ names.get(data.summary.benchmark, data.summary.benchmark) }} ({{ data.summary.benchmark }}) &middot;
     Period: {{ data.summary.period }}
+    {% for tag in data.meta.tags %}
+    · <span style="text-transform:uppercase;font-size:0.7rem;letter-spacing:0.06em;">{{ tag }}</span>
+    {% endfor %}
   </div>
   <div class="accent-rule"></div>
 </div>
@@ -27,14 +31,14 @@
   <div class="hero-card stagger">
     <div class="hero-label">Total Value</div>
     <div class="hero-value">${{ "{:,.0f}".format(data.summary.total_portfolio_value) }}</div>
-    <div class="hero-sub">{{ data.summary.num_holdings }} positions</div>
+    <div class="hero-sub">{{ data.summary.num_holdings }} position{{ "s" if data.summary.num_holdings > 1 else "" }}</div>
   </div>
   <div class="hero-card stagger">
-    <div class="hero-label">Portfolio Return</div>
+    <div class="hero-label">Total Return</div>
     <div class="hero-value {% if data.benchmark_comparison.portfolio_return_pct >= 0 %}pos{% else %}neg{% endif %}">
       {{ "{:+.1f}".format(data.benchmark_comparison.portfolio_return_pct) }}%
     </div>
-    <div class="hero-sub">Total Return</div>
+    <div class="hero-sub">Portfolio return</div>
   </div>
   <div class="hero-card stagger">
     <div class="hero-label">Sharpe Ratio</div>
@@ -48,11 +52,11 @@
   </div>
 </div>
 
-<!-- Allocation -->
+<!-- Allocation (only show if multi-holding) -->
+{% if data.summary.num_holdings > 1 %}
 <div class="section">
   <div class="section-title">Allocation</div>
 
-  <!-- Stacked bar -->
   <div class="alloc-bar-wrap">
     <div class="alloc-bar">
       {% for symbol, alloc in data.allocation.items() %}
@@ -97,6 +101,7 @@
     </table>
   </div>
 </div>
+{% endif %}
 
 <!-- Performance -->
 <div class="section">
@@ -135,7 +140,6 @@
 <!-- Risk + Benchmark side by side -->
 <div class="section">
   <div class="grid-2">
-    <!-- Risk -->
     <div>
       <div class="section-title">Risk Metrics</div>
       <div class="card">
@@ -156,7 +160,6 @@
       </div>
     </div>
 
-    <!-- Benchmark -->
     <div>
       <div class="section-title">Benchmark Comparison</div>
       <div class="card">
@@ -225,6 +228,7 @@
   </div>
 </div>
 
+{% if data.statistics.per_holding | length > 1 %}
 <div class="section">
   <div class="section-title">Per-Holding Statistics</div>
   <div class="card" style="overflow-x:auto;">
@@ -269,6 +273,7 @@
     </table>
   </div>
 </div>
+{% endif %}
 {% endif %}
 
 {% endblock %}

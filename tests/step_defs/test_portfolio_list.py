@@ -1,4 +1,4 @@
-"""Step definitions for the portfolio detail web interface feature."""
+"""Step definitions for the portfolio list and detail feature."""
 
 from __future__ import annotations
 
@@ -9,44 +9,39 @@ from httpx import ASGITransport, AsyncClient
 from pytest_bdd import parsers, scenario, then, when
 
 
-@scenario("../features/web_interface.feature", "Detail page loads for multi-holding portfolio")
-def test_detail_loads() -> None:
-    """Detail page loads for multi-holding portfolio."""
+@scenario("../features/portfolio_list.feature", "Homepage lists all portfolios")
+def test_homepage_lists_portfolios() -> None:
+    """Homepage lists all portfolios."""
 
 
-@scenario("../features/web_interface.feature", "Detail page shows allocation breakdown")
-def test_detail_allocation() -> None:
-    """Detail page shows allocation breakdown."""
+@scenario("../features/portfolio_list.feature", "Portfolio detail page loads")
+def test_portfolio_detail() -> None:
+    """Portfolio detail page loads."""
 
 
-@scenario("../features/web_interface.feature", "Detail page shows performance metrics")
-def test_detail_performance() -> None:
-    """Detail page shows performance metrics."""
+@scenario("../features/portfolio_list.feature", "Benchmark detail page loads")
+def test_benchmark_detail() -> None:
+    """Benchmark detail page loads."""
 
 
-@scenario("../features/web_interface.feature", "Detail page shows risk metrics")
-def test_detail_risk() -> None:
-    """Detail page shows risk metrics."""
+@scenario("../features/portfolio_list.feature", "Portfolio detail shows holding symbols")
+def test_portfolio_detail_symbols() -> None:
+    """Portfolio detail shows holding symbols."""
 
 
-@scenario("../features/web_interface.feature", "Detail page shows statistics section")
-def test_detail_statistics() -> None:
-    """Detail page shows statistics section."""
+@scenario("../features/portfolio_list.feature", "API returns all portfolios")
+def test_api_portfolios() -> None:
+    """API returns all portfolios."""
 
 
-@scenario("../features/web_interface.feature", "Single-holding portfolio loads")
-def test_single_holding_detail() -> None:
-    """Single-holding portfolio loads."""
-
-
-@scenario("../features/web_interface.feature", "API returns portfolio detail JSON")
+@scenario("../features/portfolio_list.feature", "API returns single portfolio detail")
 def test_api_portfolio_detail() -> None:
-    """API returns portfolio detail JSON."""
+    """API returns single portfolio detail."""
 
 
-@scenario("../features/web_interface.feature", "API returns all portfolios list")
-def test_api_portfolios_list() -> None:
-    """API returns all portfolios list."""
+@scenario("../features/portfolio_list.feature", "Unknown portfolio returns 404")
+def test_unknown_portfolio_404() -> None:
+    """Unknown portfolio returns 404."""
 
 
 # ── Fixtures ──────────────────────────────────
@@ -69,6 +64,21 @@ def app() -> Any:
 # ── WHEN steps ────────────────────────────────
 
 
+@when("I request the homepage", target_fixture="context")
+def when_request_homepage(context: dict[str, Any], app: Any) -> dict[str, Any]:
+    """Request the homepage."""
+    import asyncio
+
+    async def _get() -> Any:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            return await client.get("/")
+
+    context["response"] = asyncio.run(_get())
+    context["page_text"] = context["response"].text
+    return context
+
+
 @when(
     parsers.parse('I request the detail page for "{slug}"'),
     target_fixture="context",
@@ -84,6 +94,20 @@ def when_request_detail(context: dict[str, Any], app: Any, slug: str) -> dict[st
 
     context["response"] = asyncio.run(_get())
     context["page_text"] = context["response"].text
+    return context
+
+
+@when("I request the portfolios API", target_fixture="context")
+def when_request_portfolios_api(context: dict[str, Any], app: Any) -> dict[str, Any]:
+    """Request the portfolios API."""
+    import asyncio
+
+    async def _get() -> Any:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            return await client.get("/api/portfolios")
+
+    context["response"] = asyncio.run(_get())
     return context
 
 
@@ -104,20 +128,6 @@ def when_request_portfolio_api(context: dict[str, Any], app: Any, slug: str) -> 
     return context
 
 
-@when("I request the portfolios API", target_fixture="context")
-def when_request_portfolios_api(context: dict[str, Any], app: Any) -> dict[str, Any]:
-    """Request the portfolios list API."""
-    import asyncio
-
-    async def _get() -> Any:
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            return await client.get("/api/portfolios")
-
-    context["response"] = asyncio.run(_get())
-    return context
-
-
 # ── THEN steps ────────────────────────────────
 
 
@@ -133,13 +143,6 @@ def then_page_contains(context: dict[str, Any], text: str) -> None:
     assert text in context["page_text"], f"Expected '{text}' in page but not found"
 
 
-@then("the page should list each holding symbol")
-def then_page_lists_symbols(context: dict[str, Any]) -> None:
-    """Check the page lists all holding symbols from My Portfolio."""
-    for symbol in ["GLD", "GSG", "ACWI", "AGG"]:
-        assert symbol in context["page_text"]
-
-
 @then("the response should be valid JSON")
 def then_valid_json(context: dict[str, Any]) -> None:
     """Check the response is valid JSON."""
@@ -150,3 +153,18 @@ def then_valid_json(context: dict[str, Any]) -> None:
 def then_json_has_key(context: dict[str, Any], key: str) -> None:
     """Check the JSON response contains the given key."""
     assert key in context["json_data"], f"Expected key '{key}' in JSON response"
+
+
+@then("the JSON should be a list")
+def then_json_is_list(context: dict[str, Any]) -> None:
+    """Check the JSON response is a list."""
+    context["json_data"] = context["response"].json()
+    assert isinstance(context["json_data"], list)
+
+
+@then(parsers.parse("the JSON list should have at least {count:d} items"))
+def then_json_list_has_items(context: dict[str, Any], count: int) -> None:
+    """Check the JSON list has at least N items."""
+    assert len(context["json_data"]) >= count, (
+        f"Expected at least {count} items, got {len(context['json_data'])}"
+    )

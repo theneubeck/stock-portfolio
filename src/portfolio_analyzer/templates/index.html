@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% set active = "portfolios" %}
+
+{% block title %}Portfolios{% endblock %}
+
+{% set bar_colors = ['#c45d3e', '#3b6b8a', '#4a8a7a', '#b89a6a', '#7a5e8a', '#8a6b4a', '#5a8a3b', '#8a3b5e', '#3b5a8a', '#6a8a4a'] %}
+
+{% block content %}
+
+<!-- Page header -->
+<div class="page-header">
+  <h1>PORTFOLIOS</h1>
+  <div class="subtitle">
+    {{ portfolios | length }} portfolios &middot;
+    Click any row for full analysis
+  </div>
+  <div class="accent-rule"></div>
+</div>
+
+<!-- Hero: best & worst total return -->
+{% set sorted_by_return = portfolios | sort(attribute='total_return_pct', reverse=true) %}
+<div class="hero-grid">
+  <div class="hero-card stagger">
+    <div class="hero-label">Best Total Return</div>
+    <div class="hero-value pos">{{ "{:+.1f}".format(sorted_by_return[0].total_return_pct) }}%</div>
+    <div class="hero-sub">{{ sorted_by_return[0].name }}</div>
+  </div>
+  <div class="hero-card stagger">
+    <div class="hero-label">Worst Total Return</div>
+    <div class="hero-value neg">{{ "{:+.1f}".format(sorted_by_return[-1].total_return_pct) }}%</div>
+    <div class="hero-sub">{{ sorted_by_return[-1].name }}</div>
+  </div>
+  <div class="hero-card stagger">
+    <div class="hero-label">Highest Sharpe</div>
+    {% set best_sharpe = portfolios | sort(attribute='sharpe_ratio', reverse=true) | first %}
+    <div class="hero-value">{{ "{:.2f}".format(best_sharpe.sharpe_ratio) }}</div>
+    <div class="hero-sub">{{ best_sharpe.name }}</div>
+  </div>
+  <div class="hero-card stagger">
+    <div class="hero-label">Lowest Volatility</div>
+    {% set low_vol = portfolios | sort(attribute='volatility_pct') | first %}
+    <div class="hero-value">{{ "{:.1f}".format(low_vol.volatility_pct) }}%</div>
+    <div class="hero-sub">{{ low_vol.name }}</div>
+  </div>
+</div>
+
+<!-- Return bars -->
+<div class="section">
+  <div class="section-title">Total Return Ranking</div>
+  <div class="card">
+    {% set max_abs = sorted_by_return | map(attribute='total_return_pct') | map('abs') | max %}
+    {% for p in sorted_by_return %}
+    <a href="/portfolio/{{ p.slug }}" class="portfolio-row" style="display:flex;align-items:center;gap:1rem;text-decoration:none;color:inherit;{% if not loop.last %}margin-bottom:0.85rem;padding-bottom:0.85rem;border-bottom:1px solid var(--rule);{% endif %}">
+      <div style="width:24px;flex-shrink:0;text-align:center;">
+        <span class="badge-rank {% if loop.index == 1 %}rank-1{% endif %}">{{ loop.index }}</span>
+      </div>
+      <div style="width:160px;flex-shrink:0;">
+        <div style="font-weight:600;font-size:0.82rem;">{{ p.name }}</div>
+        <div style="font-size:0.65rem;color:var(--ink-faint);">
+          {{ p.num_holdings }} holding{{ "s" if p.num_holdings > 1 else "" }}
+          {% for tag in p.tags %}
+          · {{ tag }}
+          {% endfor %}
+        </div>
+      </div>
+      <div style="flex:1;position:relative;">
+        {% if p.total_return_pct >= 0 %}
+        <div style="height:20px;border-radius:3px;background:{{ bar_colors[loop.index0 % bar_colors|length] }};width:{{ (p.total_return_pct / max_abs * 100) if max_abs > 0 else 0 }}%;min-width:2px;opacity:0.8;"></div>
+        {% else %}
+        <div style="height:20px;border-radius:3px;background:var(--down);width:{{ (p.total_return_pct | abs / max_abs * 100) if max_abs > 0 else 0 }}%;min-width:2px;opacity:0.5;"></div>
+        {% endif %}
+      </div>
+      <div style="width:80px;text-align:right;flex-shrink:0;">
+        <span class="num {% if p.total_return_pct >= 0 %}pos{% else %}neg{% endif %}" style="font-weight:600;">
+          {{ "{:+.1f}".format(p.total_return_pct) }}%
+        </span>
+      </div>
+      <div style="width:20px;flex-shrink:0;text-align:right;color:var(--ink-faint);font-size:0.9rem;">›</div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Full table -->
+<div class="section">
+  <div class="section-title">All Portfolios</div>
+  <div class="card" style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Portfolio</th>
+          <th class="num">Total Return</th>
+          <th class="num">Annualized Vol</th>
+          <th class="num">Sharpe</th>
+          <th class="num">Max Drawdown</th>
+          <th style="width:30px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in sorted_by_return %}
+        <tr onclick="window.location='/portfolio/{{ p.slug }}'" style="cursor:pointer;">
+          <td>
+            <span class="badge-rank {% if loop.index == 1 %}rank-1{% endif %}">{{ loop.index }}</span>
+          </td>
+          <td class="symbol-cell">
+            {{ p.name }}
+            {% if "custom" in p.tags %}
+            <span class="badge" style="background:var(--paper);color:var(--ink-muted);margin-left:0.4rem;font-size:0.6rem;">CUSTOM</span>
+            {% endif %}
+          </td>
+          <td class="num">
+            <span class="{% if p.total_return_pct >= 0 %}pos-bg{% else %}neg-bg{% endif %}">
+              {{ "{:+.2f}".format(p.total_return_pct) }}%
+            </span>
+          </td>
+          <td class="num">{{ "{:.2f}".format(p.volatility_pct) }}%</td>
+          <td class="num">{{ "{:.2f}".format(p.sharpe_ratio) }}</td>
+          <td class="num neg">{{ "{:.2f}".format(p.max_drawdown_pct) }}%</td>
+          <td style="text-align:right;color:var(--ink-faint);font-size:0.9rem;">›</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

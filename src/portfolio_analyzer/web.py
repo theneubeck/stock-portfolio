@@ -2,146 +2,137 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-import numpy as np
 import pandas as pd
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from portfolio_analyzer.analyzer import PortfolioAnalyzer
-from portfolio_analyzer.comparison import PortfolioComparator
-from portfolio_analyzer.data import fetch_prices
-from portfolio_analyzer.metrics import (
-    annualized_return,
-    periods_per_year_for,
-    total_return,
-)
 from portfolio_analyzer.models import Holding, Portfolio
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 
-def _default_portfolio() -> Portfolio:
-    """Build the default portfolio for the dashboard."""
-    return Portfolio(
-        holdings=[
-            Holding(symbol="GLD", shares=50, name="SPDR Gold Shares"),
-            Holding(
-                symbol="GSG",
-                shares=80,
-                name="iShares S&P GSCI Commodity ETF",
-            ),
-            Holding(
-                symbol="ACWI",
-                shares=60,
-                name="iShares MSCI ACWI ETF",
-            ),
-            Holding(
-                symbol="AGG",
-                shares=100,
-                name="iShares Core US Aggregate Bond ETF",
-            ),
-        ]
-    )
-
-
-def _default_strategies() -> list[dict[str, Any]]:
-    """Default comparison strategies."""
-    return [
-        {
-            "name": "Equal Weight",
-            "weights": {"GLD": 25, "GSG": 25, "ACWI": 25, "AGG": 25},
-        },
-        {
-            "name": "Heavy Gold",
-            "weights": {"GLD": 50, "GSG": 10, "ACWI": 20, "AGG": 20},
-        },
-        {
-            "name": "Stocks & Bonds",
-            "weights": {"GLD": 0, "GSG": 0, "ACWI": 60, "AGG": 40},
-        },
-        {
-            "name": "All Weather",
-            "weights": {"GLD": 30, "GSG": 15, "ACWI": 30, "AGG": 25},
-        },
-    ]
+# ── Portfolio registry ────────────────────────────────────────────────────────
 
 
 @dataclass
-class BenchmarkIndex:
-    """A benchmark index to track buy-and-hold performance."""
+class PortfolioConfig:
+    """Configuration for a single portfolio in the registry."""
 
-    symbol: str
+    slug: str
     name: str
-    region: str
+    holdings: list[Holding]
+    benchmark_symbol: str = "ACWI"
+    period: str = "max"
+    interval: str = "1mo"
+    tags: list[str] = field(default_factory=list)
 
 
-BENCHMARK_INDICES: list[BenchmarkIndex] = [
-    BenchmarkIndex(symbol="SPY", name="S&P 500", region="United States"),
-    BenchmarkIndex(symbol="QQQ", name="Nasdaq 100", region="United States"),
-    BenchmarkIndex(symbol="ACWI", name="MSCI ACWI", region="Global"),
-    BenchmarkIndex(symbol="VGK", name="FTSE Europe", region="Europe"),
-    BenchmarkIndex(symbol="FEZ", name="EURO STOXX 50", region="Eurozone"),
-    BenchmarkIndex(symbol="EWD", name="MSCI Sweden", region="Sweden"),
-    BenchmarkIndex(symbol="EWJ", name="MSCI Japan", region="Japan"),
-    BenchmarkIndex(symbol="EEM", name="Emerging Markets", region="Emerging"),
-    BenchmarkIndex(symbol="AGG", name="US Aggregate Bond", region="United States"),
-    BenchmarkIndex(symbol="GLD", name="Gold", region="Global"),
-]
+def _all_portfolios() -> list[PortfolioConfig]:
+    """Return the full list of portfolio configurations."""
+    return [
+        # ── User portfolio ────────────────────────────────
+        PortfolioConfig(
+            slug="my-portfolio",
+            name="My Portfolio",
+            holdings=[
+                Holding(symbol="GLD", shares=50, name="SPDR Gold Shares"),
+                Holding(symbol="GSG", shares=80, name="iShares S&P GSCI Commodity ETF"),
+                Holding(symbol="ACWI", shares=60, name="iShares MSCI ACWI ETF"),
+                Holding(symbol="AGG", shares=100, name="iShares Core US Aggregate Bond ETF"),
+            ],
+            tags=["custom"],
+        ),
+        # ── Benchmark indices (single-holding portfolios) ─
+        PortfolioConfig(
+            slug="sp500",
+            name="S&P 500",
+            holdings=[Holding(symbol="SPY", shares=100, name="SPDR S&P 500 ETF")],
+            tags=["benchmark", "us"],
+        ),
+        PortfolioConfig(
+            slug="nasdaq100",
+            name="Nasdaq 100",
+            holdings=[
+                Holding(symbol="QQQ", shares=100, name="Invesco QQQ Trust"),
+            ],
+            tags=["benchmark", "us"],
+        ),
+        PortfolioConfig(
+            slug="msci-acwi",
+            name="MSCI ACWI",
+            holdings=[
+                Holding(symbol="ACWI", shares=100, name="iShares MSCI ACWI ETF"),
+            ],
+            tags=["benchmark", "global"],
+        ),
+        PortfolioConfig(
+            slug="ftse-europe",
+            name="FTSE Europe",
+            holdings=[
+                Holding(symbol="VGK", shares=100, name="Vanguard FTSE Europe ETF"),
+            ],
+            tags=["benchmark", "europe"],
+        ),
+        PortfolioConfig(
+            slug="euro-stoxx-50",
+            name="EURO STOXX 50",
+            holdings=[
+                Holding(symbol="FEZ", shares=100, name="SPDR EURO STOXX 50 ETF"),
+            ],
+            tags=["benchmark", "europe"],
+        ),
+        PortfolioConfig(
+            slug="sweden",
+            name="MSCI Sweden",
+            holdings=[
+                Holding(symbol="EWD", shares=100, name="iShares MSCI Sweden ETF"),
+            ],
+            tags=["benchmark", "europe"],
+        ),
+        PortfolioConfig(
+            slug="japan",
+            name="MSCI Japan",
+            holdings=[
+                Holding(symbol="EWJ", shares=100, name="iShares MSCI Japan ETF"),
+            ],
+            tags=["benchmark", "asia"],
+        ),
+        PortfolioConfig(
+            slug="emerging-markets",
+            name="Emerging Markets",
+            holdings=[
+                Holding(symbol="EEM", shares=100, name="iShares MSCI Emerging Markets ETF"),
+            ],
+            tags=["benchmark", "emerging"],
+        ),
+        PortfolioConfig(
+            slug="us-bonds",
+            name="US Aggregate Bond",
+            holdings=[
+                Holding(
+                    symbol="AGG",
+                    shares=100,
+                    name="iShares Core US Aggregate Bond ETF",
+                ),
+            ],
+            tags=["benchmark", "bonds"],
+        ),
+        PortfolioConfig(
+            slug="gold",
+            name="Gold",
+            holdings=[Holding(symbol="GLD", shares=100, name="SPDR Gold Shares")],
+            tags=["benchmark", "commodity"],
+        ),
+    ]
 
-_BENCHMARK_PERIOD = "max"
-_BENCHMARK_INTERVAL = "1mo"
 
-
-def _get_benchmark_data() -> dict[str, Any]:
-    """Get or compute benchmark index data (cached)."""
-    if "benchmarks" not in _cache:
-        symbols = [b.symbol for b in BENCHMARK_INDICES]
-        price_data = fetch_prices(symbols, period=_BENCHMARK_PERIOD, interval=_BENCHMARK_INTERVAL)
-        ppy = periods_per_year_for(_BENCHMARK_INTERVAL)
-
-        benchmarks: list[dict[str, Any]] = []
-        for bench in BENCHMARK_INDICES:
-            prices = price_data[bench.symbol]
-            periodic_returns = prices.pct_change().dropna()
-
-            vol = float(periodic_returns.std() * np.sqrt(ppy)) * 100.0
-
-            ann_ret_decimal = float(periodic_returns.mean() * ppy)
-            sharpe = 0.0
-            if periodic_returns.std() > 0:
-                sharpe = float((ann_ret_decimal - 0.04) / (periodic_returns.std() * np.sqrt(ppy)))
-
-            cum = (1 + periodic_returns).cumprod()
-            running_max = cum.cummax()
-            drawdown = (cum - running_max) / running_max
-            max_dd = float(drawdown.min()) * 100.0
-
-            benchmarks.append(
-                {
-                    "symbol": bench.symbol,
-                    "name": bench.name,
-                    "region": bench.region,
-                    "total_return_pct": total_return(prices),
-                    "annualized_return_pct": annualized_return(prices, ppy),
-                    "volatility_pct": vol,
-                    "sharpe_ratio": sharpe,
-                    "max_drawdown_pct": max_dd,
-                    "num_periods": len(prices),
-                }
-            )
-
-        _cache["benchmarks"] = {
-            "benchmarks": benchmarks,
-            "period": _BENCHMARK_PERIOD,
-            "interval": _BENCHMARK_INTERVAL,
-        }
-    result: dict[str, Any] = _cache["benchmarks"]
-    return result
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
 
 def _make_json_safe(obj: Any) -> Any:
@@ -164,111 +155,126 @@ _cache: dict[str, Any] = {}
 
 
 def _symbol_names() -> dict[str, str]:
-    """Build a symbol → display name mapping from all known symbols."""
+    """Build a symbol → display name mapping from all portfolios."""
     names: dict[str, str] = {}
-    for h in _default_portfolio().holdings:
-        names[h.symbol] = h.name if h.name else h.symbol
-    # Also map strategy symbols from comparison
-    for strategy in _default_strategies():
-        for sym in strategy["weights"]:
-            if sym not in names:
-                names[sym] = sym
-    # Also map benchmark indices
-    for bench in BENCHMARK_INDICES:
-        names[bench.symbol] = bench.name
+    for cfg in _all_portfolios():
+        for h in cfg.holdings:
+            names[h.symbol] = h.name if h.name else h.symbol
     return names
 
 
-def _get_portfolio_data() -> dict[str, Any]:
-    """Get or compute portfolio analysis data (cached)."""
-    if "portfolio" not in _cache:
+def _analyze_portfolio(cfg: PortfolioConfig) -> dict[str, Any]:
+    """Run analysis for one portfolio config (cached)."""
+    cache_key = f"portfolio:{cfg.slug}"
+    if cache_key not in _cache:
+        portfolio = Portfolio(holdings=cfg.holdings)
+        # For single-holding portfolios, use SPY as benchmark
+        # For multi-holding, use the configured benchmark
+        bench = cfg.benchmark_symbol
+        if len(cfg.holdings) == 1 and cfg.holdings[0].symbol == bench:
+            bench = "SPY"
+
         analyzer = PortfolioAnalyzer(
-            portfolio=_default_portfolio(),
-            benchmark_symbol="ACWI",
-            period="max",
-            interval="1mo",
+            portfolio=portfolio,
+            benchmark_symbol=bench,
+            period=cfg.period,
+            interval=cfg.interval,
         )
-        _cache["portfolio"] = analyzer.run()
-    result: dict[str, Any] = _cache["portfolio"]
+        result = analyzer.run()
+        # Attach portfolio metadata
+        result["meta"] = {
+            "slug": cfg.slug,
+            "name": cfg.name,
+            "tags": cfg.tags,
+        }
+        _cache[cache_key] = result
+    out: dict[str, Any] = _cache[cache_key]
+    return out
+
+
+def _get_portfolio_list() -> list[dict[str, Any]]:
+    """Get summary data for all portfolios (for the list page)."""
+    if "portfolio_list" not in _cache:
+        summaries: list[dict[str, Any]] = []
+        for cfg in _all_portfolios():
+            data = _analyze_portfolio(cfg)
+            summaries.append(
+                {
+                    "slug": cfg.slug,
+                    "name": cfg.name,
+                    "tags": cfg.tags,
+                    "num_holdings": data["summary"]["num_holdings"],
+                    "total_value": data["summary"]["total_portfolio_value"],
+                    "total_return_pct": data["benchmark_comparison"]["portfolio_return_pct"],
+                    "volatility_pct": data["risk"]["volatility_pct"],
+                    "sharpe_ratio": data["risk"]["sharpe_ratio"],
+                    "max_drawdown_pct": data["risk"]["max_drawdown_pct"],
+                }
+            )
+        _cache["portfolio_list"] = summaries
+    result: list[dict[str, Any]] = _cache["portfolio_list"]
     return result
 
 
-def _get_comparison_data() -> dict[str, Any]:
-    """Get or compute comparison data (cached)."""
-    if "comparison" not in _cache:
-        comparator = PortfolioComparator(
-            strategies=_default_strategies(),
-            monthly_investment=100,
-            rebalance_every_months=6,
-            benchmark_symbol="ACWI",
-            period="max",
-            interval="1mo",
-        )
-        _cache["comparison"] = comparator.run()
-    result: dict[str, Any] = _cache["comparison"]
-    return result
+def _find_config(slug: str) -> PortfolioConfig | None:
+    """Find a portfolio config by slug."""
+    for cfg in _all_portfolios():
+        if cfg.slug == slug:
+            return cfg
+    return None
+
+
+# ── App factory ───────────────────────────────────────────────────────────────
 
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
-    app = FastAPI(title="Portfolio Analyzer", docs_url=None, redoc_url=None)
+    application = FastAPI(title="Portfolio Analyzer", docs_url=None, redoc_url=None)
     templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
-    @app.get("/", response_class=HTMLResponse)
-    async def dashboard(request: Request) -> HTMLResponse:
-        """Render the portfolio dashboard."""
-        data = _get_portfolio_data()
+    @application.get("/", response_class=HTMLResponse)
+    async def index(request: Request) -> HTMLResponse:
+        """Render the portfolio list page."""
+        portfolios = _get_portfolio_list()
+        safe = _make_json_safe(portfolios)
+        return templates.TemplateResponse(
+            request,
+            "index.html",
+            {"portfolios": safe},
+        )
+
+    @application.get("/portfolio/{slug}", response_class=HTMLResponse)
+    async def portfolio_detail(request: Request, slug: str) -> HTMLResponse:
+        """Render a single portfolio detail page."""
+        cfg = _find_config(slug)
+        if cfg is None:
+            return HTMLResponse(content="Not found", status_code=404)
+        data = _analyze_portfolio(cfg)
         safe = _make_json_safe(data)
         return templates.TemplateResponse(
             request,
-            "dashboard.html",
+            "detail.html",
             {"data": safe, "names": _symbol_names()},
         )
 
-    @app.get("/comparison", response_class=HTMLResponse)
-    async def comparison(request: Request) -> HTMLResponse:
-        """Render the strategy comparison page."""
-        data = _get_comparison_data()
-        safe = _make_json_safe(data)
-        return templates.TemplateResponse(
-            request,
-            "comparison.html",
-            {"data": safe, "names": _symbol_names()},
-        )
+    @application.get("/api/portfolios")
+    async def api_portfolios() -> JSONResponse:
+        """Return summary list of all portfolios as JSON."""
+        portfolios = _get_portfolio_list()
+        safe = _make_json_safe(portfolios)
+        return JSONResponse(content=safe)
 
-    @app.get("/benchmarks", response_class=HTMLResponse)
-    async def benchmarks(request: Request) -> HTMLResponse:
-        """Render the benchmark indices page."""
-        data = _get_benchmark_data()
-        safe = _make_json_safe(data)
-        return templates.TemplateResponse(
-            request,
-            "benchmarks.html",
-            {"data": safe, "names": _symbol_names()},
-        )
-
-    @app.get("/api/benchmarks")
-    async def api_benchmarks() -> JSONResponse:
-        """Return benchmark index data as JSON."""
-        data = _get_benchmark_data()
+    @application.get("/api/portfolio/{slug}")
+    async def api_portfolio_detail(slug: str) -> JSONResponse:
+        """Return full analysis for one portfolio as JSON."""
+        cfg = _find_config(slug)
+        if cfg is None:
+            return JSONResponse(content={"error": "Not found"}, status_code=404)
+        data = _analyze_portfolio(cfg)
         safe = _make_json_safe(data)
         return JSONResponse(content=safe)
 
-    @app.get("/api/portfolio")
-    async def api_portfolio() -> JSONResponse:
-        """Return portfolio analysis as JSON."""
-        data = _get_portfolio_data()
-        safe = _make_json_safe(data)
-        return JSONResponse(content=safe)
-
-    @app.get("/api/comparison")
-    async def api_comparison() -> JSONResponse:
-        """Return strategy comparison as JSON."""
-        data = _get_comparison_data()
-        safe = _make_json_safe(data)
-        return JSONResponse(content=safe)
-
-    return app
+    return application
 
 
 # Module-level instance for `uvicorn portfolio_analyzer.web:app`

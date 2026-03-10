@@ -464,6 +464,17 @@
     .section:nth-of-type(7) { animation-delay: 0.4s; }
     .section:nth-of-type(8) { animation-delay: 0.45s; }
 
+    /* ── Clickable rows ─────────────── */
+    .portfolio-row {
+      transition: background 0.15s ease;
+      border-radius: var(--radius);
+      padding: 0.15rem 0.35rem;
+      margin: -0.15rem -0.35rem;
+    }
+    .portfolio-row:hover {
+      background: var(--paper);
+    }
+
     /* ── Comparison-specific ────────── */
     .strategy-row-best td { background: var(--up-bg); }
     .strategy-row-worst td { background: var(--down-bg); }
@@ -509,9 +520,7 @@
   <header class="topbar">
     <div class="topbar-brand">Portfolio<span>.</span></div>
     <nav>
-      <a href="/" {% if active == "dashboard" %}class="active"{% endif %}>Dashboard</a>
-      <a href="/comparison" {% if active == "comparison" %}class="active"{% endif %}>Comparison</a>
-      <a href="/benchmarks" {% if active == "benchmarks" %}class="active"{% endif %}>Benchmarks</a>
+      <a href="/" {% if active == "portfolios" %}class="active"{% endif %}>Portfolios</a>
     </nav>
   </header>
 
