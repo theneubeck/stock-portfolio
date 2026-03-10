@@ -57,7 +57,7 @@
       <div style="width:160px;flex-shrink:0;">
         <div style="font-weight:600;font-size:0.82rem;">{{ p.name }}</div>
         <div style="font-size:0.65rem;color:var(--ink-faint);">
-          {{ p.num_holdings }} holding{{ "s" if p.num_holdings > 1 else "" }}
+          {{ p.num_holdings }} holding{{ "s" if p.num_holdings > 1 else "" }} · {{ p.strategy }}
           {% for tag in p.tags %}
           · {{ tag }}
           {% endfor %}

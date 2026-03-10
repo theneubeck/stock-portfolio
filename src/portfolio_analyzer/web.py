@@ -30,6 +30,7 @@ class PortfolioConfig:
     benchmark_symbol: str = "ACWI"
     period: str = "max"
     interval: str = "1mo"
+    strategy_type: str = "Buy & Hold"
     tags: list[str] = field(default_factory=list)
 
 
@@ -230,6 +231,7 @@ def _analyze_portfolio(cfg: PortfolioConfig) -> dict[str, Any]:
         result["meta"] = {
             "slug": cfg.slug,
             "name": cfg.name,
+            "strategy": cfg.strategy_type,
             "tags": cfg.tags,
         }
         _cache[cache_key] = result
@@ -247,6 +249,7 @@ def _get_portfolio_list() -> list[dict[str, Any]]:
                 {
                     "slug": cfg.slug,
                     "name": cfg.name,
+                    "strategy": cfg.strategy_type,
                     "tags": cfg.tags,
                     "num_holdings": data["summary"]["num_holdings"],
                     "total_value": data["summary"]["total_portfolio_value"],

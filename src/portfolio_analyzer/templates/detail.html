@@ -17,6 +17,7 @@
   <h1>{{ data.meta.name }}</h1>
   <div class="subtitle">
     {{ data.summary.num_holdings }} holding{{ "s" if data.summary.num_holdings > 1 else "" }} &middot;
+    Strategy: {{ data.meta.strategy }} &middot;
     Benchmark: {{ names.get(data.summary.benchmark, data.summary.benchmark) }} ({{ data.summary.benchmark }}) &middot;
     Period: {{ data.summary.period }}
     {% for tag in data.meta.tags %}
