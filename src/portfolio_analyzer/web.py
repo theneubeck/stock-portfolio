@@ -12,7 +12,9 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from portfolio_analyzer.analyzer import PortfolioAnalyzer
-from portfolio_analyzer.models import Holding, Portfolio
+from portfolio_analyzer.dca import DCASimulator
+from portfolio_analyzer.metrics import RISK_FREE_RATE, individual_returns
+from portfolio_analyzer.models import Holding, Portfolio, TargetAllocation
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 
@@ -26,7 +28,10 @@ class PortfolioConfig:
 
     slug: str
     name: str
-    holdings: list[Holding]
+    holdings: list[Holding] | None = None
+    targets: list[TargetAllocation] | None = None
+    dca_monthly_investment: float = 1000.0
+    rebalance_every_months: int = 6
     benchmark_symbol: str = "ACWI"
     period: str = "max"
     interval: str = "1mo"
@@ -136,43 +141,69 @@ def _all_portfolios() -> list[PortfolioConfig]:
         PortfolioConfig(
             slug="equal-weight",
             name="Equal Weight",
-            holdings=[
-                Holding(symbol="GLD", shares=25, name="SPDR Gold Shares"),
-                Holding(symbol="GSG", shares=25, name="iShares S&P GSCI Commodity ETF"),
-                Holding(symbol="ACWI", shares=25, name="iShares MSCI ACWI ETF"),
-                Holding(symbol="AGG", shares=25, name="iShares Core US Aggregate Bond ETF"),
+            targets=[
+                TargetAllocation(symbol="GLD", name="SPDR Gold Shares", target_weight_pct=25.0),
+                TargetAllocation(
+                    symbol="GSG", name="iShares S&P GSCI Commodity ETF", target_weight_pct=25.0
+                ),
+                TargetAllocation(
+                    symbol="ACWI", name="iShares MSCI ACWI ETF", target_weight_pct=25.0
+                ),
+                TargetAllocation(
+                    symbol="AGG", name="iShares Core US Aggregate Bond ETF", target_weight_pct=25.0
+                ),
             ],
+            strategy_type="DCA & Rebalance (6mo)",
             tags=["strategy"],
         ),
         PortfolioConfig(
             slug="heavy-gold",
             name="Heavy Gold",
-            holdings=[
-                Holding(symbol="GLD", shares=50, name="SPDR Gold Shares"),
-                Holding(symbol="GSG", shares=10, name="iShares S&P GSCI Commodity ETF"),
-                Holding(symbol="ACWI", shares=20, name="iShares MSCI ACWI ETF"),
-                Holding(symbol="AGG", shares=20, name="iShares Core US Aggregate Bond ETF"),
+            targets=[
+                TargetAllocation(symbol="GLD", name="SPDR Gold Shares", target_weight_pct=50.0),
+                TargetAllocation(
+                    symbol="GSG", name="iShares S&P GSCI Commodity ETF", target_weight_pct=10.0
+                ),
+                TargetAllocation(
+                    symbol="ACWI", name="iShares MSCI ACWI ETF", target_weight_pct=20.0
+                ),
+                TargetAllocation(
+                    symbol="AGG", name="iShares Core US Aggregate Bond ETF", target_weight_pct=20.0
+                ),
             ],
+            strategy_type="DCA & Rebalance (6mo)",
             tags=["strategy"],
         ),
         PortfolioConfig(
             slug="stocks-and-bonds",
             name="Stocks & Bonds",
-            holdings=[
-                Holding(symbol="ACWI", shares=60, name="iShares MSCI ACWI ETF"),
-                Holding(symbol="AGG", shares=40, name="iShares Core US Aggregate Bond ETF"),
+            targets=[
+                TargetAllocation(
+                    symbol="ACWI", name="iShares MSCI ACWI ETF", target_weight_pct=60.0
+                ),
+                TargetAllocation(
+                    symbol="AGG", name="iShares Core US Aggregate Bond ETF", target_weight_pct=40.0
+                ),
             ],
+            strategy_type="DCA & Rebalance (6mo)",
             tags=["strategy"],
         ),
         PortfolioConfig(
             slug="all-weather",
             name="All Weather",
-            holdings=[
-                Holding(symbol="GLD", shares=30, name="SPDR Gold Shares"),
-                Holding(symbol="GSG", shares=15, name="iShares S&P GSCI Commodity ETF"),
-                Holding(symbol="ACWI", shares=30, name="iShares MSCI ACWI ETF"),
-                Holding(symbol="AGG", shares=25, name="iShares Core US Aggregate Bond ETF"),
+            targets=[
+                TargetAllocation(symbol="GLD", name="SPDR Gold Shares", target_weight_pct=30.0),
+                TargetAllocation(
+                    symbol="GSG", name="iShares S&P GSCI Commodity ETF", target_weight_pct=15.0
+                ),
+                TargetAllocation(
+                    symbol="ACWI", name="iShares MSCI ACWI ETF", target_weight_pct=30.0
+                ),
+                TargetAllocation(
+                    symbol="AGG", name="iShares Core US Aggregate Bond ETF", target_weight_pct=25.0
+                ),
             ],
+            strategy_type="DCA & Rebalance (6mo)",
             tags=["strategy"],
         ),
     ]
@@ -204,8 +235,12 @@ def _symbol_names() -> dict[str, str]:
     """Build a symbol → display name mapping from all portfolios."""
     names: dict[str, str] = {}
     for cfg in _all_portfolios():
-        for h in cfg.holdings:
-            names[h.symbol] = h.name if h.name else h.symbol
+        if cfg.holdings:
+            for h in cfg.holdings:
+                names[h.symbol] = h.name if h.name else h.symbol
+        if cfg.targets:
+            for t in cfg.targets:
+                names[t.symbol] = t.name or t.symbol
     return names
 
 
@@ -213,20 +248,97 @@ def _analyze_portfolio(cfg: PortfolioConfig) -> dict[str, Any]:
     """Run analysis for one portfolio config (cached)."""
     cache_key = f"portfolio:{cfg.slug}"
     if cache_key not in _cache:
-        portfolio = Portfolio(holdings=cfg.holdings)
-        # For single-holding portfolios, use SPY as benchmark
-        # For multi-holding, use the configured benchmark
-        bench = cfg.benchmark_symbol
-        if len(cfg.holdings) == 1 and cfg.holdings[0].symbol == bench:
-            bench = "SPY"
+        import numpy as np
 
-        analyzer = PortfolioAnalyzer(
-            portfolio=portfolio,
-            benchmark_symbol=bench,
-            period=cfg.period,
-            interval=cfg.interval,
-        )
-        result = analyzer.run()
+        if cfg.targets is not None:
+            # ── DCA / Rebalancing Portfolio ────────────────────────
+            simulator = DCASimulator(
+                targets=cfg.targets,
+                monthly_investment=cfg.dca_monthly_investment,
+                rebalance_every_months=cfg.rebalance_every_months,
+                benchmark_symbol=cfg.benchmark_symbol,
+                period=cfg.period,
+                interval=cfg.interval,
+            )
+            sim_res = simulator.run()
+
+            # Reconstruct the expected 'result' shape
+            final_shares = sim_res["summary"]["final_shares"]
+            final_prices = sim_res["summary"]["final_prices"]
+            total_value = sim_res["summary"]["final_value"]
+
+            alloc: dict[str, dict[str, float]] = {}
+            for t in cfg.targets:
+                sym = t.symbol
+                mv = final_shares[sym] * final_prices[sym]
+                alloc[sym] = {
+                    "market_value": mv,
+                    "weight_pct": (mv / total_value * 100.0) if total_value > 0 else 0.0,
+                }
+
+            # Performance of individual underlying assets
+            perf = individual_returns(
+                simulator.price_data, simulator.symbols, interval=cfg.interval
+            )
+
+            # Risk metrics calculated over the DCA value history
+            vh = sim_res["value_history"]
+            periodic = vh.pct_change().dropna()
+            vol = float(periodic.std() * np.sqrt(12)) * 100.0  # 1mo interval = 12 ppy
+            ann_ret_dec = sim_res["summary"]["annualized_return_pct"] / 100.0
+            sharpe = (ann_ret_dec - RISK_FREE_RATE) / (vol / 100.0) if vol > 0 else 0.0
+
+            cum = vh / float(vh.iloc[0])
+            running_max = cum.cummax()
+            dd = (cum - running_max) / running_max
+            max_dd = float(dd.min()) * 100.0 if len(dd) > 0 else 0.0
+
+            risk = {
+                "volatility_pct": vol,
+                "sharpe_ratio": sharpe,
+                "max_drawdown_pct": max_dd,
+            }
+
+            comparison = {
+                "portfolio_return_pct": sim_res["summary"]["total_return_pct"],
+                "benchmark_return_pct": sim_res["comparison"]["benchmark_return_pct"],
+                "excess_return_pct": sim_res["summary"]["total_return_pct"]
+                - sim_res["comparison"]["benchmark_return_pct"],
+            }
+
+            result: dict[str, Any] = {
+                "summary": {
+                    "num_holdings": len(cfg.targets),
+                    "total_portfolio_value": total_value,
+                    "benchmark": cfg.benchmark_symbol,
+                    "period": cfg.period,
+                    "interval": cfg.interval,
+                    "total_invested": sim_res["summary"]["total_invested"],
+                },
+                "allocation": alloc,
+                "performance": perf,
+                "risk": risk,
+                "benchmark_comparison": comparison,
+                "statistics": None,  # Skip rich stats for DCA right now
+                "rebalancing_log": sim_res["rebalancing_log"],
+            }
+        else:
+            # ── Buy & Hold Portfolio ───────────────────────────────
+            holdings = cfg.holdings or []
+            portfolio = Portfolio(holdings=holdings)
+            # For single-holding portfolios, use SPY as benchmark
+            bench = cfg.benchmark_symbol
+            if len(holdings) == 1 and holdings[0].symbol == bench:
+                bench = "SPY"
+
+            analyzer = PortfolioAnalyzer(
+                portfolio=portfolio,
+                benchmark_symbol=bench,
+                period=cfg.period,
+                interval=cfg.interval,
+            )
+            result = analyzer.run()
+
         # Attach portfolio metadata
         result["meta"] = {
             "slug": cfg.slug,

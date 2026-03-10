@@ -174,6 +174,8 @@ class DCASimulator:
             "num_investments": n_periods,
             "num_periods": n_periods,
             "num_rebalances": len(rebalancing_log),
+            "final_shares": shares,
+            "final_prices": {s: float(self.price_data[s].iloc[-1]) for s in symbols},
         }
 
         return {

@@ -277,4 +277,38 @@
 {% endif %}
 {% endif %}
 
+{% if data.rebalancing_log %}
+<div class="section">
+  <div class="section-title">Rebalancing Log</div>
+  <div class="card" style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th class="num">Portfolio Value</th>
+          {% for sym in data.allocation.keys() %}
+          <th class="num">{{ sym }} ({{ "{:.0f}".format(data.rebalancing_log[0].target_weights[sym]) }}%)</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in data.rebalancing_log %}
+        <tr>
+          <td>{{ entry.date }}</td>
+          <td class="num">${{ "{:,.2f}".format(entry.portfolio_value) }}</td>
+          {% for sym in data.allocation.keys() %}
+          <td class="num" style="white-space:nowrap;">
+            <span style="color:var(--ink-muted);">{{ "{:.1f}".format(entry.weights_before.get(sym, 0.0)) }}</span>
+            <span style="color:var(--ink-faint);margin:0 0.1rem;">→</span>
+            {{ "{:.1f}".format(entry.weights_after.get(sym, 0.0)) }}%
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
 {% endblock %}
