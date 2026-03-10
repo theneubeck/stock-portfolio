@@ -193,6 +193,93 @@ def format_report(report: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def format_comparison_report(result: dict[str, Any]) -> str:
+    """Format a multi-portfolio comparison result as a human-readable report.
+
+    Args:
+        result: The dict returned by PortfolioComparator.run().
+
+    Returns:
+        A formatted multi-line string report.
+    """
+    lines: list[str] = []
+    sep = "=" * 72
+
+    lines.append(sep)
+    lines.append("  PORTFOLIO STRATEGY COMPARISON")
+    lines.append(sep)
+    lines.append(
+        f"  Benchmark: {result['benchmark_symbol']}"
+        f"  (Return: {result['benchmark_return_pct']:+.2f}%)"
+    )
+    lines.append(f"  Strategies compared: {len(result['strategies'])}")
+    lines.append("")
+
+    # ── Side-by-side summary table ────────────
+    lines.append("-" * 72)
+    header = (
+        f"  {'Strategy':<18}"
+        f"{'Total Return':>13}"
+        f"{'Volatility':>12}"
+        f"{'Sharpe':>9}"
+        f"{'Max DD':>9}"
+        f"{'Excess':>10}"
+    )
+    lines.append(header)
+    divider = (
+        f"  {'--------':<18}"
+        f"{'------------':>13}"
+        f"{'----------':>12}"
+        f"{'------':>9}"
+        f"{'------':>9}"
+        f"{'------':>10}"
+    )
+    lines.append(divider)
+
+    for s in result["ranking"]:
+        row = (
+            f"  {s['name']:<18}"
+            f"{s['total_return_pct']:>+12.2f}%"
+            f"{s['volatility_pct']:>11.2f}%"
+            f"{s['sharpe_ratio']:>9.2f}"
+            f"{s['max_drawdown_pct']:>+8.2f}%"
+            f"{s['excess_return_pct']:>+9.2f}%"
+        )
+        lines.append(row)
+    lines.append("")
+
+    # ── Best / Worst ──────────────────────────
+    ranking = result["ranking"]
+    best = ranking[0]
+    worst = ranking[-1]
+
+    lines.append("-" * 72)
+    lines.append("  VERDICT")
+    lines.append("-" * 72)
+    lines.append(
+        f"  Best strategy:   {best['name']}"
+        f"  ({best['total_return_pct']:+.2f}% return,"
+        f" {best['sharpe_ratio']:.2f} Sharpe)"
+    )
+    lines.append(
+        f"  Worst strategy:  {worst['name']}"
+        f"  ({worst['total_return_pct']:+.2f}% return,"
+        f" {worst['sharpe_ratio']:.2f} Sharpe)"
+    )
+    lines.append("")
+
+    if result["beat_benchmark"]:
+        names = ", ".join(result["beat_benchmark"])
+        lines.append(f"  Beat benchmark:          {names}")
+    if result["underperformed_benchmark"]:
+        names = ", ".join(result["underperformed_benchmark"])
+        lines.append(f"  Underperformed benchmark: {names}")
+    lines.append("")
+    lines.append(sep)
+
+    return "\n".join(lines)
+
+
 def _fmt_date(date: Any) -> str:
     """Format a date/timestamp to YYYY-MM-DD string."""
     if hasattr(date, "date"):
