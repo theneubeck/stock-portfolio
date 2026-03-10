@@ -320,7 +320,7 @@ def _analyze_portfolio(cfg: PortfolioConfig) -> dict[str, Any]:
                 "risk": risk,
                 "benchmark_comparison": comparison,
                 "statistics": None,  # Skip rich stats for DCA right now
-                "rebalancing_log": sim_res["rebalancing_log"],
+                "activity_log": sim_res["activity_log"],
             }
         else:
             # ── Buy & Hold Portfolio ───────────────────────────────

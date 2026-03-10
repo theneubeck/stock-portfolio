@@ -185,13 +185,15 @@ def then_periods_match(context: dict[str, Any]) -> None:
 @then("rebalancing should have occurred at least once")
 def then_rebalanced_at_least_once(context: dict[str, Any]) -> None:
     result = context["result"]
-    assert len(result["rebalancing_log"]) >= 1
+    rebalances = [e for e in result["activity_log"] if e["action"] == "Rebalance"]
+    assert len(rebalances) >= 1
 
 
 @then("after each rebalance the weights should be within 1 percent of targets")
 def then_weights_near_targets(context: dict[str, Any]) -> None:
     result = context["result"]
-    for entry in result["rebalancing_log"]:
+    rebalances = [e for e in result["activity_log"] if e["action"] == "Rebalance"]
+    for entry in rebalances:
         for symbol, actual_weight in entry["weights_after"].items():
             target_weight = entry["target_weights"][symbol]
             assert abs(actual_weight - target_weight) <= 1.0, (
@@ -301,7 +303,7 @@ def then_report_investment_history(context: dict[str, Any]) -> None:
 
 @then("the DCA report should contain a rebalancing log section")
 def then_report_rebalancing_log(context: dict[str, Any]) -> None:
-    assert "rebalancing_log" in context["result"]
+    assert "activity_log" in context["result"]
 
 
 @then("the DCA report should contain a comparison section")

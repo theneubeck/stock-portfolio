@@ -71,9 +71,10 @@ def format_dca_report(result: dict[str, Any]) -> str:
 
     # ── Rebalancing Log ───────────────────────
     lines.append("-" * 60)
-    lines.append(f"  REBALANCING LOG ({len(result['rebalancing_log'])} events)")
+    lines.append(f"  REBALANCING LOG ({result['summary']['num_rebalances']} events)")
     lines.append("-" * 60)
-    for entry in result["rebalancing_log"]:
+    rebalances = [e for e in result["activity_log"] if e["action"] == "Rebalance"]
+    for entry in rebalances:
         date_str = (
             str(entry["date"].date()) if hasattr(entry["date"], "date") else str(entry["date"])
         )

@@ -83,7 +83,7 @@ class DCASimulator:
         # Tracking
         value_history_values: list[float] = []
         value_history_dates: list[Any] = []
-        rebalancing_log: list[dict[str, Any]] = []
+        activity_log: list[dict[str, Any]] = []
         months_since_rebalance = 0
 
         for i in range(n_periods):
@@ -99,6 +99,17 @@ class DCASimulator:
                     shares[symbol] += amount / price
             total_invested += self.monthly_investment
             months_since_rebalance += 1
+
+            # Log the buy action
+            current_value_after_buy = sum(shares[s] * prices_now[s] for s in symbols)
+            activity_log.append(
+                {
+                    "date": date,
+                    "action": "Buy",
+                    "amount": self.monthly_investment,
+                    "portfolio_value": current_value_after_buy,
+                }
+            )
 
             # ── Rebalance if it's time ──
             if months_since_rebalance >= self.rebalance_every_months and i > 0:
@@ -118,9 +129,10 @@ class DCASimulator:
                         s: (shares[s] * prices_now[s] / portfolio_value) * 100.0 for s in symbols
                     }
 
-                    rebalancing_log.append(
+                    activity_log.append(
                         {
                             "date": date,
+                            "action": "Rebalance",
                             "portfolio_value": portfolio_value,
                             "weights_before": weights_before,
                             "weights_after": weights_after,
@@ -166,6 +178,8 @@ class DCASimulator:
             n_periods=n_periods,
         )
 
+        num_rebalances = sum(1 for e in activity_log if e["action"] == "Rebalance")
+
         summary: dict[str, Any] = {
             "total_invested": total_invested,
             "final_value": final_value,
@@ -173,7 +187,7 @@ class DCASimulator:
             "annualized_return_pct": annualized_pct,
             "num_investments": n_periods,
             "num_periods": n_periods,
-            "num_rebalances": len(rebalancing_log),
+            "num_rebalances": num_rebalances,
             "final_shares": shares,
             "final_prices": {s: float(self.price_data[s].iloc[-1]) for s in symbols},
         }
@@ -181,7 +195,7 @@ class DCASimulator:
         return {
             "summary": summary,
             "value_history": value_history,
-            "rebalancing_log": rebalancing_log,
+            "activity_log": activity_log,
             "comparison": comparison,
         }
 
