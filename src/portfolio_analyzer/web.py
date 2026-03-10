@@ -38,8 +38,8 @@ def _all_portfolios() -> list[PortfolioConfig]:
     return [
         # ── User portfolio ────────────────────────────────
         PortfolioConfig(
-            slug="my-portfolio",
-            name="My Portfolio",
+            slug="global-multi-asset",
+            name="Global Multi-Asset",
             holdings=[
                 Holding(symbol="GLD", shares=50, name="SPDR Gold Shares"),
                 Holding(symbol="GSG", shares=80, name="iShares S&P GSCI Commodity ETF"),

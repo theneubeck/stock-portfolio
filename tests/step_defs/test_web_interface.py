@@ -135,7 +135,7 @@ def then_page_contains(context: dict[str, Any], text: str) -> None:
 
 @then("the page should list each holding symbol")
 def then_page_lists_symbols(context: dict[str, Any]) -> None:
-    """Check the page lists all holding symbols from My Portfolio."""
+    """Check the page lists all holding symbols from Global Multi-Asset."""
     for symbol in ["GLD", "GSG", "ACWI", "AGG"]:
         assert symbol in context["page_text"]
 
