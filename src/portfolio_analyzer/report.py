@@ -181,6 +181,84 @@ def format_report(report: dict[str, Any]) -> str:
     lines.append(f"  Benchmark Return:   {comp['benchmark_return_pct']:+.2f}%")
     lines.append(f"  Excess Return:      {comp['excess_return_pct']:+.2f}%")
     lines.append("")
+
+    # ── Statistics ────────────────────────────
+    if "statistics" in report:
+        stats = report["statistics"]
+        _format_portfolio_stats(lines, stats["portfolio"])
+        _format_per_holding_stats(lines, stats["per_holding"])
+
     lines.append(sep)
 
     return "\n".join(lines)
+
+
+def _fmt_date(date: Any) -> str:
+    """Format a date/timestamp to YYYY-MM-DD string."""
+    if hasattr(date, "date"):
+        return str(date.date())
+    return str(date)
+
+
+def _format_portfolio_stats(lines: list[str], ps: dict[str, Any]) -> None:
+    """Append portfolio-level statistics lines."""
+    lines.append("-" * 60)
+    lines.append("  PORTFOLIO STATISTICS")
+    lines.append("-" * 60)
+
+    peak_d = _fmt_date(ps["peak_value_date"])
+    trough_d = _fmt_date(ps["trough_value_date"])
+    lines.append(f"  Peak Value:         ${ps['peak_value']:,.2f}  ({peak_d})")
+    lines.append(f"  Trough Value:       ${ps['trough_value']:,.2f}  ({trough_d})")
+    lines.append(f"  Current Value:      ${ps['current_value']:,.2f}")
+    lines.append("")
+
+    best_d = _fmt_date(ps["best_period_date"])
+    worst_d = _fmt_date(ps["worst_period_date"])
+    best_r = ps["best_period_return_pct"]
+    worst_r = ps["worst_period_return_pct"]
+    lines.append(f"  Best Period:        {best_r:+.2f}%  ({best_d})")
+    lines.append(f"  Worst Period:       {worst_r:+.2f}%  ({worst_d})")
+    lines.append(f"  Median Return:      {ps['median_return_pct']:+.2f}%")
+    lines.append(f"  Mean Return:        {ps['mean_return_pct']:+.2f}%")
+    total = ps["total_periods"]
+    lines.append(f"  Positive Periods:   {ps['positive_periods']}/{total}")
+    lines.append(f"  Negative Periods:   {ps['negative_periods']}/{total}")
+    lines.append("")
+
+
+def _format_per_holding_stats(
+    lines: list[str],
+    per_holding: dict[str, dict[str, Any]],
+) -> None:
+    """Append per-holding statistics lines."""
+    lines.append("-" * 60)
+    lines.append("  PER-HOLDING STATISTICS")
+    lines.append("-" * 60)
+    for symbol, hs in per_holding.items():
+        min_d = _fmt_date(hs["min_price_date"])
+        max_d = _fmt_date(hs["max_price_date"])
+        best_d = _fmt_date(hs["best_period_date"])
+        worst_d = _fmt_date(hs["worst_period_date"])
+
+        lines.append(f"  {symbol}")
+        lines.append(
+            f"    Price  — Min: ${hs['min_price']:,.2f} ({min_d})"
+            f"  Max: ${hs['max_price']:,.2f} ({max_d})"
+        )
+        lines.append(f"    Median Price: ${hs['median_price']:,.2f}")
+        lines.append(
+            f"    Return — Best: {hs['best_period_return_pct']:+.2f}%"
+            f" ({best_d})"
+            f"  Worst: {hs['worst_period_return_pct']:+.2f}%"
+            f" ({worst_d})"
+        )
+        total = hs["total_periods"]
+        up = hs["positive_periods"]
+        dn = hs["negative_periods"]
+        lines.append(
+            f"    Median: {hs['median_return_pct']:+.2f}%"
+            f"  Std: {hs['return_std_pct']:.2f}%"
+            f"  Up: {up}/{total}  Down: {dn}/{total}"
+        )
+    lines.append("")

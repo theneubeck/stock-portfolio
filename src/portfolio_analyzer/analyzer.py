@@ -14,6 +14,7 @@ from portfolio_analyzer.metrics import (
     risk_metrics,
 )
 from portfolio_analyzer.models import Portfolio
+from portfolio_analyzer.statistics import per_holding_statistics, portfolio_statistics
 
 
 class PortfolioAnalyzer:
@@ -60,6 +61,17 @@ class PortfolioAnalyzer:
         """Compare portfolio performance to the benchmark."""
         return benchmark_comparison(self.portfolio, self.price_data, self.benchmark_symbol)
 
+    def calculate_statistics(self) -> dict[str, Any]:
+        """Calculate descriptive statistics (min, max, median, extremes)."""
+        holding_stats = per_holding_statistics(
+            self.price_data, self.portfolio.symbols, interval=self.interval
+        )
+        port_stats = portfolio_statistics(self.portfolio, self.price_data, interval=self.interval)
+        return {
+            "per_holding": holding_stats,
+            "portfolio": port_stats,
+        }
+
     def run(self) -> dict[str, Any]:
         """Run the full analysis pipeline and return a structured report.
 
@@ -73,6 +85,7 @@ class PortfolioAnalyzer:
         perf = self.calculate_individual_returns()
         risk = self.calculate_risk_metrics()
         comparison = self.compare_to_benchmark()
+        stats = self.calculate_statistics()
 
         total_value = sum(a["market_value"] for a in alloc.values())
 
@@ -90,4 +103,5 @@ class PortfolioAnalyzer:
             "performance": perf,
             "risk": risk,
             "benchmark_comparison": comparison,
+            "statistics": stats,
         }
