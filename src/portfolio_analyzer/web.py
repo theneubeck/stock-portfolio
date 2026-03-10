@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -12,6 +14,12 @@ from fastapi.templating import Jinja2Templates
 
 from portfolio_analyzer.analyzer import PortfolioAnalyzer
 from portfolio_analyzer.comparison import PortfolioComparator
+from portfolio_analyzer.data import fetch_prices
+from portfolio_analyzer.metrics import (
+    annualized_return,
+    periods_per_year_for,
+    total_return,
+)
 from portfolio_analyzer.models import Holding, Portfolio
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
@@ -63,6 +71,79 @@ def _default_strategies() -> list[dict[str, Any]]:
     ]
 
 
+@dataclass
+class BenchmarkIndex:
+    """A benchmark index to track buy-and-hold performance."""
+
+    symbol: str
+    name: str
+    region: str
+
+
+BENCHMARK_INDICES: list[BenchmarkIndex] = [
+    BenchmarkIndex(symbol="SPY", name="S&P 500", region="United States"),
+    BenchmarkIndex(symbol="QQQ", name="Nasdaq 100", region="United States"),
+    BenchmarkIndex(symbol="ACWI", name="MSCI ACWI", region="Global"),
+    BenchmarkIndex(symbol="VGK", name="FTSE Europe", region="Europe"),
+    BenchmarkIndex(symbol="FEZ", name="EURO STOXX 50", region="Eurozone"),
+    BenchmarkIndex(symbol="EWD", name="MSCI Sweden", region="Sweden"),
+    BenchmarkIndex(symbol="EWJ", name="MSCI Japan", region="Japan"),
+    BenchmarkIndex(symbol="EEM", name="Emerging Markets", region="Emerging"),
+    BenchmarkIndex(symbol="AGG", name="US Aggregate Bond", region="United States"),
+    BenchmarkIndex(symbol="GLD", name="Gold", region="Global"),
+]
+
+_BENCHMARK_PERIOD = "max"
+_BENCHMARK_INTERVAL = "1mo"
+
+
+def _get_benchmark_data() -> dict[str, Any]:
+    """Get or compute benchmark index data (cached)."""
+    if "benchmarks" not in _cache:
+        symbols = [b.symbol for b in BENCHMARK_INDICES]
+        price_data = fetch_prices(symbols, period=_BENCHMARK_PERIOD, interval=_BENCHMARK_INTERVAL)
+        ppy = periods_per_year_for(_BENCHMARK_INTERVAL)
+
+        benchmarks: list[dict[str, Any]] = []
+        for bench in BENCHMARK_INDICES:
+            prices = price_data[bench.symbol]
+            periodic_returns = prices.pct_change().dropna()
+
+            vol = float(periodic_returns.std() * np.sqrt(ppy)) * 100.0
+
+            ann_ret_decimal = float(periodic_returns.mean() * ppy)
+            sharpe = 0.0
+            if periodic_returns.std() > 0:
+                sharpe = float((ann_ret_decimal - 0.04) / (periodic_returns.std() * np.sqrt(ppy)))
+
+            cum = (1 + periodic_returns).cumprod()
+            running_max = cum.cummax()
+            drawdown = (cum - running_max) / running_max
+            max_dd = float(drawdown.min()) * 100.0
+
+            benchmarks.append(
+                {
+                    "symbol": bench.symbol,
+                    "name": bench.name,
+                    "region": bench.region,
+                    "total_return_pct": total_return(prices),
+                    "annualized_return_pct": annualized_return(prices, ppy),
+                    "volatility_pct": vol,
+                    "sharpe_ratio": sharpe,
+                    "max_drawdown_pct": max_dd,
+                    "num_periods": len(prices),
+                }
+            )
+
+        _cache["benchmarks"] = {
+            "benchmarks": benchmarks,
+            "period": _BENCHMARK_PERIOD,
+            "interval": _BENCHMARK_INTERVAL,
+        }
+    result: dict[str, Any] = _cache["benchmarks"]
+    return result
+
+
 def _make_json_safe(obj: Any) -> Any:
     """Recursively convert pandas/numpy types to JSON-safe Python types."""
     if isinstance(obj, dict):
@@ -83,7 +164,7 @@ _cache: dict[str, Any] = {}
 
 
 def _symbol_names() -> dict[str, str]:
-    """Build a symbol → display name mapping from the default portfolio."""
+    """Build a symbol → display name mapping from all known symbols."""
     names: dict[str, str] = {}
     for h in _default_portfolio().holdings:
         names[h.symbol] = h.name if h.name else h.symbol
@@ -92,6 +173,9 @@ def _symbol_names() -> dict[str, str]:
         for sym in strategy["weights"]:
             if sym not in names:
                 names[sym] = sym
+    # Also map benchmark indices
+    for bench in BENCHMARK_INDICES:
+        names[bench.symbol] = bench.name
     return names
 
 
@@ -151,6 +235,24 @@ def create_app() -> FastAPI:
             "comparison.html",
             {"data": safe, "names": _symbol_names()},
         )
+
+    @app.get("/benchmarks", response_class=HTMLResponse)
+    async def benchmarks(request: Request) -> HTMLResponse:
+        """Render the benchmark indices page."""
+        data = _get_benchmark_data()
+        safe = _make_json_safe(data)
+        return templates.TemplateResponse(
+            request,
+            "benchmarks.html",
+            {"data": safe, "names": _symbol_names()},
+        )
+
+    @app.get("/api/benchmarks")
+    async def api_benchmarks() -> JSONResponse:
+        """Return benchmark index data as JSON."""
+        data = _get_benchmark_data()
+        safe = _make_json_safe(data)
+        return JSONResponse(content=safe)
 
     @app.get("/api/portfolio")
     async def api_portfolio() -> JSONResponse:
