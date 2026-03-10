@@ -9,6 +9,7 @@ from typing import Any
 import pandas as pd
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from portfolio_analyzer.dca import DCASimulator
@@ -16,6 +17,7 @@ from portfolio_analyzer.metrics import RISK_FREE_RATE, individual_returns
 from portfolio_analyzer.models import TargetAllocation
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
+STATIC_DIR = Path(__file__).parent / "static"
 
 
 # ── Portfolio registry ────────────────────────────────────────────────────────
@@ -395,6 +397,7 @@ def _find_config(slug: str) -> PortfolioConfig | None:
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     application = FastAPI(title="Portfolio Analyzer", docs_url=None, redoc_url=None)
+    application.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
     templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
     @application.get("/", response_class=HTMLResponse)
