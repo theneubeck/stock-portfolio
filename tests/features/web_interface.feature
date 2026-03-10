@@ -26,11 +26,10 @@ Feature: Portfolio detail web page
     And the page should contain "Sharpe"
     And the page should contain "Drawdown"
 
-  Scenario: Detail page shows statistics section
+  Scenario: Detail page shows activity log section
     When I request the detail page for "global-multi-asset"
-    Then the page should contain "Statistics"
-    And the page should contain "Peak"
-    And the page should contain "Trough"
+    Then the page should contain "Activity Log"
+    And the page should contain "Invested"
 
   Scenario: Single-holding portfolio loads
     When I request the detail page for "sp500"

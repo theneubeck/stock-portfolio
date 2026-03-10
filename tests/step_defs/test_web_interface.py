@@ -29,9 +29,9 @@ def test_detail_risk() -> None:
     """Detail page shows risk metrics."""
 
 
-@scenario("../features/web_interface.feature", "Detail page shows statistics section")
-def test_detail_statistics() -> None:
-    """Detail page shows statistics section."""
+@scenario("../features/web_interface.feature", "Detail page shows activity log section")
+def test_detail_activity_log() -> None:
+    """Detail page shows activity log section."""
 
 
 @scenario("../features/web_interface.feature", "Single-holding portfolio loads")

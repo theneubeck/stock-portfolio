@@ -21,7 +21,7 @@ class DCASimulator:
     Args:
         targets: Target allocation per asset.
         monthly_investment: Dollar amount invested each month.
-        rebalance_every_months: Rebalance frequency in months.
+        rebalance_every_months: Rebalance frequency in months (0 for never).
         benchmark_symbol: Ticker to compare against.
         period: yfinance period string (e.g. "max").
         interval: yfinance interval string (should be "1mo" for monthly DCA).
@@ -112,7 +112,11 @@ class DCASimulator:
             )
 
             # ── Rebalance if it's time ──
-            if months_since_rebalance >= self.rebalance_every_months and i > 0:
+            if (
+                self.rebalance_every_months > 0
+                and months_since_rebalance >= self.rebalance_every_months
+                and i > 0
+            ):
                 portfolio_value = sum(shares[s] * prices_now[s] for s in symbols)
                 if portfolio_value > 0:
                     weights_before: dict[str, float] = {
