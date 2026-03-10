@@ -56,3 +56,11 @@ Feature: Portfolio list and detail pages
   Scenario: Unknown portfolio returns 404
     When I request the detail page for "nonexistent"
     Then the response status should be 404
+
+  Scenario: Homepage shows rolling 5-year returns leaderboard
+    When I request the homepage
+    Then the page should contain "Rolling 5-Year Returns"
+    And the page should contain "Mean Return"
+    And the page should contain "Positive Outcomes"
+    And the page should contain "Best 5Y"
+    And the page should contain "Worst 5Y"

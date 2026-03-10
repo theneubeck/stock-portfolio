@@ -396,6 +396,35 @@ def _find_config(slug: str) -> PortfolioConfig | None:
     return None
 
 
+def _get_rolling_leaderboard(horizon: int = 5) -> list[dict[str, Any]]:
+    """Compute rolling N-year return stats for every portfolio, sorted by mean."""
+    cache_key = f"rolling_leaderboard:{horizon}"
+    if cache_key not in _cache:
+        entries: list[dict[str, Any]] = []
+        for cfg in _all_portfolios():
+            data = _rolling_analysis(cfg, horizon)
+            stats = data["statistics"]
+            entries.append(
+                {
+                    "slug": cfg.slug,
+                    "name": cfg.name,
+                    "tags": cfg.tags,
+                    "mean_return_pct": stats["mean_return_pct"],
+                    "median_return_pct": stats["median_return_pct"],
+                    "best_return_pct": stats["best_return_pct"],
+                    "worst_return_pct": stats["worst_return_pct"],
+                    "sharpe_ratio": stats["sharpe_ratio"],
+                    "positive_pct": stats["positive_pct"],
+                    "std_return_pct": stats["std_return_pct"],
+                    "count": stats["count"],
+                }
+            )
+        entries.sort(key=lambda e: e["mean_return_pct"], reverse=True)
+        _cache[cache_key] = entries
+    result: list[dict[str, Any]] = _cache[cache_key]
+    return result
+
+
 def _rolling_analysis(cfg: PortfolioConfig, horizon: int) -> dict[str, Any]:
     """Compute rolling N-year return analysis for a portfolio (cached).
 
@@ -466,11 +495,13 @@ def create_app() -> FastAPI:
     async def index(request: Request) -> HTMLResponse:
         """Render the portfolio list page."""
         portfolios = _get_portfolio_list()
+        rolling_lb = _get_rolling_leaderboard(horizon=5)
         safe = _make_json_safe(portfolios)
+        safe_rolling = _make_json_safe(rolling_lb)
         return templates.TemplateResponse(
             request,
             "index.html",
-            {"portfolios": safe},
+            {"portfolios": safe, "rolling_leaderboard": safe_rolling},
         )
 
     @application.get("/portfolio/{slug}", response_class=HTMLResponse)

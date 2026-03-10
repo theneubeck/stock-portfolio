@@ -44,6 +44,14 @@ def test_unknown_portfolio_404() -> None:
     """Unknown portfolio returns 404."""
 
 
+@scenario(
+    "../features/portfolio_list.feature",
+    "Homepage shows rolling 5-year returns leaderboard",
+)
+def test_homepage_rolling_leaderboard() -> None:
+    """Homepage shows rolling 5-year returns leaderboard."""
+
+
 # ── Fixtures ──────────────────────────────────
 
 

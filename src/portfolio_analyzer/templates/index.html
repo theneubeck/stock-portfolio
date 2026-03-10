@@ -125,4 +125,120 @@
   </div>
 </div>
 
+<!-- Rolling 5-Year Returns Leaderboard -->
+{% if rolling_leaderboard %}
+<div class="section">
+  <div class="section-title">Rolling 5-Year Returns</div>
+  <div style="margin-bottom:1.5rem;font-size:0.8rem;color:var(--ink-muted);">
+    For every possible entry date, what would a 5-year buy-and-hold have returned?
+    Ranked by mean outcome.
+  </div>
+
+  <!-- Hero highlights -->
+  {% set best_mean = rolling_leaderboard[0] %}
+  {% set worst_mean = rolling_leaderboard[-1] %}
+  {% set best_positive = rolling_leaderboard | sort(attribute='positive_pct', reverse=true) | first %}
+  {% set best_rolling_sharpe = rolling_leaderboard | sort(attribute='sharpe_ratio', reverse=true) | first %}
+  <div class="hero-grid">
+    <div class="hero-card stagger">
+      <div class="hero-label">Best Mean 5Y Return</div>
+      <div class="hero-value pos">{{ "{:+.1f}".format(best_mean.mean_return_pct) }}%</div>
+      <div class="hero-sub">{{ best_mean.name }}</div>
+    </div>
+    <div class="hero-card stagger">
+      <div class="hero-label">Worst Mean 5Y Return</div>
+      <div class="hero-value {% if worst_mean.mean_return_pct >= 0 %}pos{% else %}neg{% endif %}">{{ "{:+.1f}".format(worst_mean.mean_return_pct) }}%</div>
+      <div class="hero-sub">{{ worst_mean.name }}</div>
+    </div>
+    <div class="hero-card stagger">
+      <div class="hero-label">Most Reliable (% Positive)</div>
+      <div class="hero-value pos">{{ "{:.0f}".format(best_positive.positive_pct) }}%</div>
+      <div class="hero-sub">{{ best_positive.name }}</div>
+    </div>
+    <div class="hero-card stagger">
+      <div class="hero-label">Best 5Y Sharpe</div>
+      <div class="hero-value">{{ "{:.2f}".format(best_rolling_sharpe.sharpe_ratio) }}</div>
+      <div class="hero-sub">{{ best_rolling_sharpe.name }}</div>
+    </div>
+  </div>
+
+  <!-- Mean return ranking bars -->
+  <div class="card" style="margin-bottom:1.5rem;">
+    {% set max_abs_mean = rolling_leaderboard | map(attribute='mean_return_pct') | map('abs') | max %}
+    {% for p in rolling_leaderboard %}
+    <a href="/portfolio/{{ p.slug }}/rolling?horizon=5" class="portfolio-row" style="display:flex;align-items:center;gap:1rem;text-decoration:none;color:inherit;{% if not loop.last %}margin-bottom:0.85rem;padding-bottom:0.85rem;border-bottom:1px solid var(--rule);{% endif %}">
+      <div style="width:24px;flex-shrink:0;text-align:center;">
+        <span class="badge-rank {% if loop.index == 1 %}rank-1{% endif %}">{{ loop.index }}</span>
+      </div>
+      <div style="width:140px;flex-shrink:0;">
+        <div style="font-weight:600;font-size:0.82rem;">{{ p.name }}</div>
+        <div style="font-size:0.65rem;color:var(--ink-faint);">
+          {{ p.count }} windows · {{ "{:.0f}".format(p.positive_pct) }}% positive
+        </div>
+      </div>
+      <div style="flex:1;position:relative;">
+        {% if p.mean_return_pct >= 0 %}
+        <div style="height:20px;border-radius:3px;background:var(--up);width:{{ (p.mean_return_pct / max_abs_mean * 100) if max_abs_mean > 0 else 0 }}%;min-width:2px;opacity:0.7;"></div>
+        {% else %}
+        <div style="height:20px;border-radius:3px;background:var(--down);width:{{ (p.mean_return_pct | abs / max_abs_mean * 100) if max_abs_mean > 0 else 0 }}%;min-width:2px;opacity:0.5;"></div>
+        {% endif %}
+      </div>
+      <div style="width:80px;text-align:right;flex-shrink:0;">
+        <span class="num {% if p.mean_return_pct >= 0 %}pos{% else %}neg{% endif %}" style="font-weight:600;">
+          {{ "{:+.1f}".format(p.mean_return_pct) }}%
+        </span>
+      </div>
+      <div style="width:20px;flex-shrink:0;text-align:right;color:var(--ink-faint);font-size:0.9rem;">›</div>
+    </a>
+    {% endfor %}
+  </div>
+
+  <!-- Full table -->
+  <div class="card" style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Portfolio</th>
+          <th class="num">Mean Return</th>
+          <th class="num">Median Return</th>
+          <th class="num">Best 5Y</th>
+          <th class="num">Worst 5Y</th>
+          <th class="num">Sharpe</th>
+          <th class="num">Positive Outcomes</th>
+          <th style="width:30px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in rolling_leaderboard %}
+        <tr onclick="window.location='/portfolio/{{ p.slug }}/rolling?horizon=5'" style="cursor:pointer;">
+          <td>
+            <span class="badge-rank {% if loop.index == 1 %}rank-1{% endif %}">{{ loop.index }}</span>
+          </td>
+          <td class="symbol-cell">{{ p.name }}</td>
+          <td class="num">
+            <span class="{% if p.mean_return_pct >= 0 %}pos-bg{% else %}neg-bg{% endif %}">
+              {{ "{:+.1f}".format(p.mean_return_pct) }}%
+            </span>
+          </td>
+          <td class="num {% if p.median_return_pct >= 0 %}pos{% else %}neg{% endif %}">
+            {{ "{:+.1f}".format(p.median_return_pct) }}%
+          </td>
+          <td class="num pos">{{ "{:+.1f}".format(p.best_return_pct) }}%</td>
+          <td class="num neg">{{ "{:+.1f}".format(p.worst_return_pct) }}%</td>
+          <td class="num">{{ "{:.2f}".format(p.sharpe_ratio) }}</td>
+          <td class="num">
+            <span class="{% if p.positive_pct >= 80 %}pos-bg{% elif p.positive_pct < 50 %}neg-bg{% else %}{% endif %}" style="{% if p.positive_pct >= 50 and p.positive_pct < 80 %}color:var(--ink);{% endif %}">
+              {{ "{:.0f}".format(p.positive_pct) }}%
+            </span>
+          </td>
+          <td style="text-align:right;color:var(--ink-faint);font-size:0.9rem;">›</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
 {% endblock %}
