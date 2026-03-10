@@ -15,6 +15,11 @@ from fastapi.templating import Jinja2Templates
 from portfolio_analyzer.dca import DCASimulator
 from portfolio_analyzer.metrics import RISK_FREE_RATE, individual_returns
 from portfolio_analyzer.models import TargetAllocation
+from portfolio_analyzer.rolling import (
+    rolling_return_histogram,
+    rolling_return_statistics,
+    rolling_returns,
+)
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 STATIC_DIR = Path(__file__).parent / "static"
@@ -391,6 +396,63 @@ def _find_config(slug: str) -> PortfolioConfig | None:
     return None
 
 
+def _rolling_analysis(cfg: PortfolioConfig, horizon: int) -> dict[str, Any]:
+    """Compute rolling N-year return analysis for a portfolio (cached).
+
+    For multi-asset portfolios we build a weighted portfolio price series
+    from the DCA value history.  For single-asset portfolios we use the
+    raw price series directly.
+    """
+    cache_key = f"rolling:{cfg.slug}:{horizon}"
+    if cache_key not in _cache:
+        # Get portfolio value history as the "price" series
+        analysis = _analyze_portfolio(cfg)
+
+        # Re-run DCA to get the value_history Series
+        bench = cfg.benchmark_symbol
+        if len(cfg.targets) == 1 and cfg.targets[0].symbol == bench:
+            bench = "SPY"
+
+        sim = DCASimulator(
+            targets=cfg.targets,
+            monthly_investment=cfg.dca_monthly_investment,
+            rebalance_every_months=cfg.rebalance_every_months,
+            benchmark_symbol=bench,
+            period=cfg.period,
+            interval=cfg.interval,
+        )
+        sim.fetch_data()
+
+        # For single-holding: use raw prices (better for rolling analysis)
+        # For multi-holding: use the first target's prices as proxy or
+        # build a weighted index
+        if len(cfg.targets) == 1:
+            prices = sim.price_data[cfg.targets[0].symbol]
+        else:
+            # Build a weighted portfolio price series (normalised to 100)
+            weights = {t.symbol: t.target_weight_pct / 100.0 for t in cfg.targets}
+            frames: dict[str, pd.Series] = {}
+            for t in cfg.targets:
+                p = sim.price_data[t.symbol]
+                # Normalise each to start at 1
+                frames[t.symbol] = p / float(p.iloc[0]) * weights[t.symbol]
+            combined = pd.DataFrame(frames).sum(axis=1) * 100.0
+            prices = combined
+
+        rets = rolling_returns(prices, horizon_years=horizon, interval=cfg.interval)
+        stats = rolling_return_statistics(rets, horizon_years=horizon)
+        hist = rolling_return_histogram(rets)
+
+        _cache[cache_key] = {
+            "statistics": stats,
+            "histogram": hist,
+            "meta": analysis.get("meta", {}),
+            "horizon": horizon,
+        }
+    result: dict[str, Any] = _cache[cache_key]
+    return result
+
+
 # ── App factory ───────────────────────────────────────────────────────────────
 
 
@@ -439,6 +501,30 @@ def create_app() -> FastAPI:
         if cfg is None:
             return JSONResponse(content={"error": "Not found"}, status_code=404)
         data = _analyze_portfolio(cfg)
+        safe = _make_json_safe(data)
+        return JSONResponse(content=safe)
+
+    @application.get("/portfolio/{slug}/rolling", response_class=HTMLResponse)
+    async def rolling_returns_page(request: Request, slug: str, horizon: int = 5) -> HTMLResponse:
+        """Render the rolling N-year returns page for a portfolio."""
+        cfg = _find_config(slug)
+        if cfg is None:
+            return HTMLResponse(content="Not found", status_code=404)
+        data = _rolling_analysis(cfg, horizon)
+        safe = _make_json_safe(data)
+        return templates.TemplateResponse(
+            request,
+            "rolling.html",
+            {"data": safe, "names": _symbol_names()},
+        )
+
+    @application.get("/api/portfolio/{slug}/rolling")
+    async def api_rolling_returns(slug: str, horizon: int = 5) -> JSONResponse:
+        """Return rolling N-year return analysis as JSON."""
+        cfg = _find_config(slug)
+        if cfg is None:
+            return JSONResponse(content={"error": "Not found"}, status_code=404)
+        data = _rolling_analysis(cfg, horizon)
         safe = _make_json_safe(data)
         return JSONResponse(content=safe)
 

@@ -7,9 +7,13 @@
 
 {% block content %}
 
-<!-- Breadcrumb -->
-<div style="margin-bottom:1.5rem;animation:fadeSlideIn 0.4s ease both;">
+<!-- Breadcrumb + tab nav -->
+<div style="margin-bottom:1.5rem;animation:fadeSlideIn 0.4s ease both;display:flex;justify-content:space-between;align-items:center;">
   <a href="/" style="font-size:0.78rem;color:var(--ink-muted);text-decoration:none;font-weight:500;">← All Portfolios</a>
+  <div style="display:flex;gap:0.35rem;">
+    <span style="padding:0.35rem 0.85rem;border-radius:var(--radius);font-size:0.72rem;font-weight:600;background:var(--ink);color:var(--cream);letter-spacing:0.04em;">Overview</span>
+    <a href="/portfolio/{{ data.meta.slug }}/rolling?horizon=5" style="padding:0.35rem 0.85rem;border-radius:var(--radius);font-size:0.72rem;font-weight:600;background:var(--paper);color:var(--ink-muted);text-decoration:none;border:1px solid var(--rule);letter-spacing:0.04em;">Rolling Returns</a>
+  </div>
 </div>
 
 <!-- Page header -->
