@@ -8,12 +8,15 @@
 {# ── Compute allocation colors ─────────────── #}
 {% set bar_colors = ['#c45d3e', '#3b6b8a', '#4a8a7a', '#b89a6a', '#7a5e8a', '#8a6b4a'] %}
 
+{# ── Helper: symbol display ────────────────── #}
+{# names dict passed from web.py: symbol → full name #}
+
 <!-- Page header -->
 <div class="page-header">
   <h1>PORTFOLIO ANALYSIS</h1>
   <div class="subtitle">
     {{ data.summary.num_holdings }} holdings &middot;
-    Benchmark: {{ data.summary.benchmark }} &middot;
+    Benchmark: {{ names.get(data.summary.benchmark, data.summary.benchmark) }} ({{ data.summary.benchmark }}) &middot;
     Period: {{ data.summary.period }}
   </div>
   <div class="accent-rule"></div>
@@ -55,7 +58,7 @@
       {% for symbol, alloc in data.allocation.items() %}
       <div class="alloc-segment"
            style="width: {{ alloc.weight_pct }}%; background: {{ bar_colors[loop.index0 % bar_colors|length] }};"
-           title="{{ symbol }}: {{ '{:.1f}'.format(alloc.weight_pct) }}%">
+           title="{{ names.get(symbol, symbol) }} ({{ symbol }}): {{ '{:.1f}'.format(alloc.weight_pct) }}%">
       </div>
       {% endfor %}
     </div>
@@ -63,7 +66,7 @@
       {% for symbol, alloc in data.allocation.items() %}
       <div class="alloc-legend-item">
         <div class="alloc-dot" style="background: {{ bar_colors[loop.index0 % bar_colors|length] }};"></div>
-        {{ symbol }} · {{ "{:.1f}".format(alloc.weight_pct) }}%
+        {{ names.get(symbol, symbol) }} ({{ symbol }}) · {{ "{:.1f}".format(alloc.weight_pct) }}%
       </div>
       {% endfor %}
     </div>
@@ -73,7 +76,7 @@
     <table>
       <thead>
         <tr>
-          <th>Symbol</th>
+          <th>Holding</th>
           <th class="num">Market Value</th>
           <th class="num">Weight</th>
         </tr>
@@ -83,7 +86,8 @@
         <tr>
           <td class="symbol-cell">
             <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:{{ bar_colors[loop.index0 % bar_colors|length] }};margin-right:0.5rem;vertical-align:middle;"></span>
-            {{ symbol }}
+            {{ names.get(symbol, symbol) }}
+            <span class="ticker-label">{{ symbol }}</span>
           </td>
           <td class="num">${{ "{:,.2f}".format(alloc.market_value) }}</td>
           <td class="num">{{ "{:.1f}".format(alloc.weight_pct) }}%</td>
@@ -101,7 +105,7 @@
     <table>
       <thead>
         <tr>
-          <th>Symbol</th>
+          <th>Holding</th>
           <th class="num">Total Return</th>
           <th class="num">Annualized</th>
         </tr>
@@ -109,7 +113,10 @@
       <tbody>
         {% for symbol, perf in data.performance.items() %}
         <tr>
-          <td class="symbol-cell">{{ symbol }}</td>
+          <td class="symbol-cell">
+            {{ names.get(symbol, symbol) }}
+            <span class="ticker-label">{{ symbol }}</span>
+          </td>
           <td class="num">
             <span class="{% if perf.total_return_pct >= 0 %}pos-bg{% else %}neg-bg{% endif %}">
               {{ "{:+.2f}".format(perf.total_return_pct) }}%
@@ -161,7 +168,7 @@
             </span>
           </div>
           <div class="kv-item" style="margin-top:0.75rem;">
-            <span class="kv-label">{{ data.summary.benchmark }} Return</span>
+            <span class="kv-label">{{ names.get(data.summary.benchmark, data.summary.benchmark) }} ({{ data.summary.benchmark }}) Return</span>
             <span class="kv-value">{{ "{:+.2f}".format(data.benchmark_comparison.benchmark_return_pct) }}%</span>
           </div>
           <div class="kv-item" style="margin-top:0.75rem;">
@@ -224,7 +231,7 @@
     <table>
       <thead>
         <tr>
-          <th>Symbol</th>
+          <th>Holding</th>
           <th class="num">Min Price</th>
           <th class="num">Max Price</th>
           <th class="num">Median</th>
@@ -236,7 +243,10 @@
       <tbody>
         {% for symbol, hs in data.statistics.per_holding.items() %}
         <tr>
-          <td class="symbol-cell">{{ symbol }}</td>
+          <td class="symbol-cell">
+            {{ names.get(symbol, symbol) }}
+            <span class="ticker-label">{{ symbol }}</span>
+          </td>
           <td class="num">
             ${{ "{:,.2f}".format(hs.min_price) }}
             <div style="font-size:0.65rem;color:var(--ink-faint);">{{ hs.min_price_date }}</div>

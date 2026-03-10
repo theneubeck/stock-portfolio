@@ -82,6 +82,19 @@ def _make_json_safe(obj: Any) -> Any:
 _cache: dict[str, Any] = {}
 
 
+def _symbol_names() -> dict[str, str]:
+    """Build a symbol → display name mapping from the default portfolio."""
+    names: dict[str, str] = {}
+    for h in _default_portfolio().holdings:
+        names[h.symbol] = h.name if h.name else h.symbol
+    # Also map strategy symbols from comparison
+    for strategy in _default_strategies():
+        for sym in strategy["weights"]:
+            if sym not in names:
+                names[sym] = sym
+    return names
+
+
 def _get_portfolio_data() -> dict[str, Any]:
     """Get or compute portfolio analysis data (cached)."""
     if "portfolio" not in _cache:
@@ -125,7 +138,7 @@ def create_app() -> FastAPI:
         return templates.TemplateResponse(
             request,
             "dashboard.html",
-            {"data": safe},
+            {"data": safe, "names": _symbol_names()},
         )
 
     @app.get("/comparison", response_class=HTMLResponse)
@@ -136,7 +149,7 @@ def create_app() -> FastAPI:
         return templates.TemplateResponse(
             request,
             "comparison.html",
-            {"data": safe},
+            {"data": safe, "names": _symbol_names()},
         )
 
     @app.get("/api/portfolio")

@@ -12,8 +12,8 @@
   <h1>STRATEGY COMPARISON</h1>
   <div class="subtitle">
     {{ data.strategies | length }} strategies &middot;
-    Benchmark: {{ data.benchmark_symbol }}
-    ({{ "{:+.2f}".format(data.benchmark_return_pct) }}%)
+    Benchmark: {{ names.get(data.benchmark_symbol, data.benchmark_symbol) }} ({{ data.benchmark_symbol }})
+    {{ "{:+.2f}".format(data.benchmark_return_pct) }}%
   </div>
   <div class="accent-rule"></div>
 </div>
@@ -65,7 +65,7 @@
     <!-- Benchmark reference line -->
     <div style="margin-top:1rem;padding-top:0.75rem;border-top:1px dashed var(--rule);display:flex;align-items:center;gap:1rem;">
       <div style="width:130px;flex-shrink:0;">
-        <div style="font-size:0.75rem;color:var(--ink-muted);font-weight:500;">{{ data.benchmark_symbol }} benchmark</div>
+        <div style="font-size:0.75rem;color:var(--ink-muted);font-weight:500;">{{ names.get(data.benchmark_symbol, data.benchmark_symbol) }} ({{ data.benchmark_symbol }})</div>
       </div>
       <div style="flex:1;"></div>
       <div style="width:80px;text-align:right;flex-shrink:0;">
@@ -126,14 +126,17 @@
 <!-- Target Allocations -->
 <div class="section">
   <div class="section-title">Target Allocations</div>
-  <div class="card">
+  <div class="card" style="overflow-x:auto;">
     <table>
       <thead>
         <tr>
           <th>Strategy</th>
           {% set first_strategy = data.strategies[0] %}
           {% for sym in first_strategy.weights.keys() %}
-          <th class="num">{{ sym }}</th>
+          <th class="num">
+            {{ names.get(sym, sym) }}
+            <span class="ticker-label">{{ sym }}</span>
+          </th>
           {% endfor %}
         </tr>
       </thead>
@@ -182,7 +185,7 @@
       <div class="kv-grid" style="grid-template-columns: 1fr;">
         <div class="kv-item">
           <span class="kv-label">Benchmark</span>
-          <span class="kv-value">{{ data.benchmark_symbol }}</span>
+          <span class="kv-value">{{ names.get(data.benchmark_symbol, data.benchmark_symbol) }} ({{ data.benchmark_symbol }})</span>
         </div>
         <div class="kv-item" style="margin-top:0.75rem;">
           <span class="kv-label">Benchmark Return</span>
