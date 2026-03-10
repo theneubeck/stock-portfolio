@@ -345,6 +345,63 @@ def _all_portfolios() -> list[PortfolioConfig]:
             strategy_type="DCA & Rebalance (6mo)",
             tags=["strategy"],
         ),
+        # ── AW Restricted (limited fund selection) ────────
+        PortfolioConfig(
+            slug="aw-restricted-precision",
+            name="AW Restricted (Precision)",
+            targets=[
+                TargetAllocation(
+                    symbol="ACWI", name="iShares MSCI ACWI ETF", target_weight_pct=23.0
+                ),
+                TargetAllocation(
+                    symbol="EWD", name="iShares MSCI Sweden ETF", target_weight_pct=16.0
+                ),
+                TargetAllocation(
+                    symbol="TLT",
+                    name="iShares 20+ Year Treasury Bond ETF",
+                    target_weight_pct=38.0,
+                ),
+                TargetAllocation(
+                    symbol="GNR",
+                    name="SPDR S&P Global Natural Resources ETF",
+                    target_weight_pct=10.0,
+                ),
+                TargetAllocation(
+                    symbol="GDX", name="VanEck Gold Miners ETF", target_weight_pct=13.0
+                ),
+            ],
+            rebalance_every_months=6,
+            strategy_type="DCA & Rebalance (6mo)",
+            tags=["strategy"],
+        ),
+        PortfolioConfig(
+            slug="aw-restricted-simple",
+            name="AW Restricted (Simple)",
+            targets=[
+                TargetAllocation(
+                    symbol="ACWI", name="iShares MSCI ACWI ETF", target_weight_pct=20.0
+                ),
+                TargetAllocation(
+                    symbol="EWD", name="iShares MSCI Sweden ETF", target_weight_pct=20.0
+                ),
+                TargetAllocation(
+                    symbol="TLT",
+                    name="iShares 20+ Year Treasury Bond ETF",
+                    target_weight_pct=40.0,
+                ),
+                TargetAllocation(
+                    symbol="GNR",
+                    name="SPDR S&P Global Natural Resources ETF",
+                    target_weight_pct=10.0,
+                ),
+                TargetAllocation(
+                    symbol="GDX", name="VanEck Gold Miners ETF", target_weight_pct=10.0
+                ),
+            ],
+            rebalance_every_months=6,
+            strategy_type="DCA & Rebalance (6mo)",
+            tags=["strategy"],
+        ),
     ]
 
 
