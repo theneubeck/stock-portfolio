@@ -82,13 +82,13 @@
   </div>
 
   <div class="card">
-    <table>
+    <table class="sortable">
       <thead>
         <tr>
-          <th>Holding</th>
-          <th class="num">Market Value</th>
-          <th class="num">Final Weight</th>
-          <th class="num">Target</th>
+          <th data-sort="alpha">Holding</th>
+          <th class="num" data-sort="num">Market Value</th>
+          <th class="num" data-sort="num">Final Weight</th>
+          <th class="num" data-sort="num">Target</th>
         </tr>
       </thead>
       <tbody>
@@ -120,12 +120,12 @@
 <div class="section">
   <div class="section-title">Performance</div>
   <div class="card">
-    <table>
+    <table class="sortable">
       <thead>
         <tr>
-          <th>Holding</th>
-          <th class="num">Total Return</th>
-          <th class="num">Annualized</th>
+          <th data-sort="alpha">Holding</th>
+          <th class="num" data-sort="num">Total Return</th>
+          <th class="num" data-sort="num">Annualized</th>
         </tr>
       </thead>
       <tbody>
@@ -245,16 +245,16 @@
 <div class="section">
   <div class="section-title">Per-Holding Statistics</div>
   <div class="card" style="overflow-x:auto;">
-    <table>
+    <table class="sortable">
       <thead>
         <tr>
-          <th>Holding</th>
-          <th class="num">Min Price</th>
-          <th class="num">Max Price</th>
-          <th class="num">Median</th>
-          <th class="num">Best Period</th>
-          <th class="num">Worst Period</th>
-          <th class="num">Std Dev</th>
+          <th data-sort="alpha">Holding</th>
+          <th class="num" data-sort="num">Min Price</th>
+          <th class="num" data-sort="num">Max Price</th>
+          <th class="num" data-sort="num">Median</th>
+          <th class="num" data-sort="num">Best Period</th>
+          <th class="num" data-sort="num">Worst Period</th>
+          <th class="num" data-sort="num">Std Dev</th>
         </tr>
       </thead>
       <tbody>
@@ -293,13 +293,13 @@
 <div class="section">
   <div class="section-title">Activity Log</div>
   <div class="card" style="overflow-x:auto; max-height: 500px; overflow-y: auto;">
-    <table>
+    <table class="sortable">
       <thead>
         <tr>
-          <th>Date</th>
-          <th>Action</th>
-          <th class="num">Portfolio Value</th>
-          <th>Details</th>
+          <th data-sort="alpha">Date</th>
+          <th data-sort="alpha">Action</th>
+          <th class="num" data-sort="num">Portfolio Value</th>
+          <th data-sort="none">Details</th>
         </tr>
       </thead>
       <tbody>

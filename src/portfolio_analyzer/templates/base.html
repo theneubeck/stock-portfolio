@@ -507,6 +507,19 @@
       font-weight: 600;
     }
 
+    /* ── Sortable table headers ─────── */
+    table.sortable thead th {
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.15s ease;
+    }
+    table.sortable thead th:hover {
+      color: var(--ink);
+    }
+    table.sortable thead th[data-sort="none"] {
+      cursor: default;
+    }
+
     /* ── Responsive ─────────────────── */
     @media (max-width: 600px) {
       .page-wrapper { padding: 0 1rem 3rem; }
@@ -532,5 +545,6 @@
   <div class="page-wrapper">
     <footer>Portfolio Analyzer &middot; Read-only view &middot; Data via Yahoo Finance</footer>
   </div>
+  <script src="/static/sort.js"></script>
 </body>
 </html>
