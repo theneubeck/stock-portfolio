@@ -41,6 +41,12 @@ coverage:
 	uv run coverage xml -o coverage.xml
 	uv run coverage report -m --fail-under=85
 
+# ── Web server ────────────────────────────────
+
+.PHONY: serve
+serve:
+	uv run uvicorn portfolio_analyzer.web:app --reload --port 8000
+
 # ── All checks (CI gate) ─────────────────────
 
 .PHONY: check

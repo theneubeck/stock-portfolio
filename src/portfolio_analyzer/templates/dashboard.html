@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% set active = "dashboard" %}
+
+{% block title %}Portfolio Analysis — Dashboard{% endblock %}
+
+{% block content %}
+<h1>PORTFOLIO ANALYSIS</h1>
+
+<!-- Summary -->
+<div class="card">
+  <dl class="kv">
+    <dt>Holdings</dt>
+    <dd>{{ data.summary.num_holdings }}</dd>
+    <dt>Total Value</dt>
+    <dd>${{ "{:,.2f}".format(data.summary.total_portfolio_value) }}</dd>
+    <dt>Benchmark</dt>
+    <dd>{{ data.summary.benchmark }}</dd>
+    <dt>Period</dt>
+    <dd>{{ data.summary.period }}</dd>
+  </dl>
+</div>
+
+<!-- Allocation -->
+<h2>Allocation</h2>
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Symbol</th>
+        <th class="num">Market Value</th>
+        <th class="num">Weight</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for symbol, alloc in data.allocation.items() %}
+      <tr>
+        <td>{{ symbol }}</td>
+        <td class="num">${{ "{:,.2f}".format(alloc.market_value) }}</td>
+        <td class="num">{{ "{:.1f}".format(alloc.weight_pct) }}%</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Performance -->
+<h2>Performance</h2>
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Symbol</th>
+        <th class="num">Total Return</th>
+        <th class="num">Annualized</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for symbol, perf in data.performance.items() %}
+      <tr>
+        <td>{{ symbol }}</td>
+        <td class="num {% if perf.total_return_pct >= 0 %}pos{% else %}neg{% endif %}">
+          {{ "{:+.2f}".format(perf.total_return_pct) }}%
+        </td>
+        <td class="num {% if perf.annualized_return_pct >= 0 %}pos{% else %}neg{% endif %}">
+          {{ "{:+.2f}".format(perf.annualized_return_pct) }}%
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Risk -->
+<h2>Risk Metrics</h2>
+<div class="card">
+  <dl class="kv">
+    <dt>Volatility (ann.)</dt>
+    <dd>{{ "{:.2f}".format(data.risk.volatility_pct) }}%</dd>
+    <dt>Sharpe Ratio</dt>
+    <dd>{{ "{:.2f}".format(data.risk.sharpe_ratio) }}</dd>
+    <dt>Max Drawdown</dt>
+    <dd class="neg">{{ "{:.2f}".format(data.risk.max_drawdown_pct) }}%</dd>
+  </dl>
+</div>
+
+<!-- Benchmark Comparison -->
+<h2>Benchmark Comparison</h2>
+<div class="card">
+  <dl class="kv">
+    <dt>Portfolio Return</dt>
+    <dd class="{% if data.benchmark_comparison.portfolio_return_pct >= 0 %}pos{% else %}neg{% endif %}">
+      {{ "{:+.2f}".format(data.benchmark_comparison.portfolio_return_pct) }}%
+    </dd>
+    <dt>Benchmark Return</dt>
+    <dd>{{ "{:+.2f}".format(data.benchmark_comparison.benchmark_return_pct) }}%</dd>
+    <dt>Excess Return</dt>
+    <dd class="{% if data.benchmark_comparison.excess_return_pct >= 0 %}pos{% else %}neg{% endif %}">
+      {{ "{:+.2f}".format(data.benchmark_comparison.excess_return_pct) }}%
+    </dd>
+  </dl>
+</div>
+
+<!-- Statistics -->
+{% if data.statistics %}
+<h2>Portfolio Statistics</h2>
+<div class="card">
+  <dl class="kv">
+    <dt>Peak Value</dt>
+    <dd>${{ "{:,.2f}".format(data.statistics.portfolio.peak_value) }}
+      <span style="color:var(--muted)">({{ data.statistics.portfolio.peak_value_date }})</span>
+    </dd>
+    <dt>Trough Value</dt>
+    <dd>${{ "{:,.2f}".format(data.statistics.portfolio.trough_value) }}
+      <span style="color:var(--muted)">({{ data.statistics.portfolio.trough_value_date }})</span>
+    </dd>
+    <dt>Best Period</dt>
+    <dd class="pos">{{ "{:+.2f}".format(data.statistics.portfolio.best_period_return_pct) }}%
+      <span style="color:var(--muted)">({{ data.statistics.portfolio.best_period_date }})</span>
+    </dd>
+    <dt>Worst Period</dt>
+    <dd class="neg">{{ "{:+.2f}".format(data.statistics.portfolio.worst_period_return_pct) }}%
+      <span style="color:var(--muted)">({{ data.statistics.portfolio.worst_period_date }})</span>
+    </dd>
+    <dt>Median Return</dt>
+    <dd>{{ "{:+.2f}".format(data.statistics.portfolio.median_return_pct) }}%</dd>
+    <dt>Positive / Negative</dt>
+    <dd>{{ data.statistics.portfolio.positive_periods }} / {{ data.statistics.portfolio.negative_periods }}</dd>
+  </dl>
+</div>
+
+<h2>Per-Holding Statistics</h2>
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Symbol</th>
+        <th class="num">Min Price</th>
+        <th class="num">Max Price</th>
+        <th class="num">Median</th>
+        <th class="num">Best</th>
+        <th class="num">Worst</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for symbol, hs in data.statistics.per_holding.items() %}
+      <tr>
+        <td>{{ symbol }}</td>
+        <td class="num">${{ "{:,.2f}".format(hs.min_price) }}</td>
+        <td class="num">${{ "{:,.2f}".format(hs.max_price) }}</td>
+        <td class="num">${{ "{:,.2f}".format(hs.median_price) }}</td>
+        <td class="num pos">{{ "{:+.2f}".format(hs.best_period_return_pct) }}%</td>
+        <td class="num neg">{{ "{:+.2f}".format(hs.worst_period_return_pct) }}%</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% endblock %}

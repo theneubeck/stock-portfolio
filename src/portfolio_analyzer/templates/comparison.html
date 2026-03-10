@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% set active = "comparison" %}
+
+{% block title %}Strategy Comparison{% endblock %}
+
+{% block content %}
+<h1>STRATEGY COMPARISON</h1>
+
+<div class="card">
+  <dl class="kv">
+    <dt>Benchmark</dt>
+    <dd>{{ data.benchmark_symbol }} ({{ "{:+.2f}".format(data.benchmark_return_pct) }}%)</dd>
+    <dt>Strategies</dt>
+    <dd>{{ data.strategies | length }}</dd>
+  </dl>
+</div>
+
+<!-- Ranking Table -->
+<h2>Ranking by Total Return</h2>
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Strategy</th>
+        <th class="num">Total Return</th>
+        <th class="num">Volatility</th>
+        <th class="num">Sharpe</th>
+        <th class="num">Max Drawdown</th>
+        <th class="num">Excess</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in data.ranking %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ s.name }}</td>
+        <td class="num {% if s.total_return_pct >= 0 %}pos{% else %}neg{% endif %}">
+          {{ "{:+.2f}".format(s.total_return_pct) }}%
+        </td>
+        <td class="num">{{ "{:.2f}".format(s.volatility_pct) }}%</td>
+        <td class="num">{{ "{:.2f}".format(s.sharpe_ratio) }}</td>
+        <td class="num neg">{{ "{:.2f}".format(s.max_drawdown_pct) }}%</td>
+        <td class="num {% if s.excess_return_pct >= 0 %}pos{% else %}neg{% endif %}">
+          {{ "{:+.2f}".format(s.excess_return_pct) }}%
+        </td>
+        <td>
+          {% if loop.first %}<span class="badge badge-best">BEST</span>{% endif %}
+          {% if loop.last %}<span class="badge badge-worst">WORST</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Allocation Weights -->
+<h2>Target Allocations</h2>
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Strategy</th>
+        {% set first_strategy = data.strategies[0] %}
+        {% for sym in first_strategy.weights.keys() %}
+        <th class="num">{{ sym }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in data.strategies %}
+      <tr>
+        <td>{{ s.name }}</td>
+        {% for sym, w in s.weights.items() %}
+        <td class="num">{{ w }}%</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Beat / Underperformed -->
+<h2>Verdict</h2>
+<div class="card">
+  <dl class="kv">
+    <dt>Best Strategy</dt>
+    <dd>
+      <span class="badge badge-best">{{ data.ranking[0].name }}</span>
+      {{ "{:+.2f}".format(data.ranking[0].total_return_pct) }}% return
+    </dd>
+    <dt>Worst Strategy</dt>
+    <dd>
+      <span class="badge badge-worst">{{ data.ranking[-1].name }}</span>
+      {{ "{:+.2f}".format(data.ranking[-1].total_return_pct) }}% return
+    </dd>
+    {% if data.beat_benchmark %}
+    <dt>Beat Benchmark</dt>
+    <dd class="pos">{{ data.beat_benchmark | join(", ") }}</dd>
+    {% endif %}
+    {% if data.underperformed_benchmark %}
+    <dt>Underperformed</dt>
+    <dd class="neg">{{ data.underperformed_benchmark | join(", ") }}</dd>
+    {% endif %}
+  </dl>
+</div>
+
+{% endblock %}
