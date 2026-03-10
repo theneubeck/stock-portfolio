@@ -4,156 +4,260 @@
 {% block title %}Portfolio Analysis — Dashboard{% endblock %}
 
 {% block content %}
-<h1>PORTFOLIO ANALYSIS</h1>
 
-<!-- Summary -->
-<div class="card">
-  <dl class="kv">
-    <dt>Holdings</dt>
-    <dd>{{ data.summary.num_holdings }}</dd>
-    <dt>Total Value</dt>
-    <dd>${{ "{:,.2f}".format(data.summary.total_portfolio_value) }}</dd>
-    <dt>Benchmark</dt>
-    <dd>{{ data.summary.benchmark }}</dd>
-    <dt>Period</dt>
-    <dd>{{ data.summary.period }}</dd>
-  </dl>
+{# ── Compute allocation colors ─────────────── #}
+{% set bar_colors = ['#c45d3e', '#3b6b8a', '#4a8a7a', '#b89a6a', '#7a5e8a', '#8a6b4a'] %}
+
+<!-- Page header -->
+<div class="page-header">
+  <h1>PORTFOLIO ANALYSIS</h1>
+  <div class="subtitle">
+    {{ data.summary.num_holdings }} holdings &middot;
+    Benchmark: {{ data.summary.benchmark }} &middot;
+    Period: {{ data.summary.period }}
+  </div>
+  <div class="accent-rule"></div>
+</div>
+
+<!-- Hero numbers -->
+<div class="hero-grid">
+  <div class="hero-card stagger">
+    <div class="hero-label">Total Value</div>
+    <div class="hero-value">${{ "{:,.0f}".format(data.summary.total_portfolio_value) }}</div>
+    <div class="hero-sub">{{ data.summary.num_holdings }} positions</div>
+  </div>
+  <div class="hero-card stagger">
+    <div class="hero-label">Portfolio Return</div>
+    <div class="hero-value {% if data.benchmark_comparison.portfolio_return_pct >= 0 %}pos{% else %}neg{% endif %}">
+      {{ "{:+.1f}".format(data.benchmark_comparison.portfolio_return_pct) }}%
+    </div>
+    <div class="hero-sub">Total Return</div>
+  </div>
+  <div class="hero-card stagger">
+    <div class="hero-label">Sharpe Ratio</div>
+    <div class="hero-value">{{ "{:.2f}".format(data.risk.sharpe_ratio) }}</div>
+    <div class="hero-sub">Risk-adjusted</div>
+  </div>
+  <div class="hero-card stagger">
+    <div class="hero-label">Max Drawdown</div>
+    <div class="hero-value neg">{{ "{:.1f}".format(data.risk.max_drawdown_pct) }}%</div>
+    <div class="hero-sub">Worst peak-to-trough</div>
+  </div>
 </div>
 
 <!-- Allocation -->
-<h2>Allocation</h2>
-<div class="card">
-  <table>
-    <thead>
-      <tr>
-        <th>Symbol</th>
-        <th class="num">Market Value</th>
-        <th class="num">Weight</th>
-      </tr>
-    </thead>
-    <tbody>
+<div class="section">
+  <div class="section-title">Allocation</div>
+
+  <!-- Stacked bar -->
+  <div class="alloc-bar-wrap">
+    <div class="alloc-bar">
       {% for symbol, alloc in data.allocation.items() %}
-      <tr>
-        <td>{{ symbol }}</td>
-        <td class="num">${{ "{:,.2f}".format(alloc.market_value) }}</td>
-        <td class="num">{{ "{:.1f}".format(alloc.weight_pct) }}%</td>
-      </tr>
+      <div class="alloc-segment"
+           style="width: {{ alloc.weight_pct }}%; background: {{ bar_colors[loop.index0 % bar_colors|length] }};"
+           title="{{ symbol }}: {{ '{:.1f}'.format(alloc.weight_pct) }}%">
+      </div>
       {% endfor %}
-    </tbody>
-  </table>
+    </div>
+    <div class="alloc-legend">
+      {% for symbol, alloc in data.allocation.items() %}
+      <div class="alloc-legend-item">
+        <div class="alloc-dot" style="background: {{ bar_colors[loop.index0 % bar_colors|length] }};"></div>
+        {{ symbol }} · {{ "{:.1f}".format(alloc.weight_pct) }}%
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th class="num">Market Value</th>
+          <th class="num">Weight</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for symbol, alloc in data.allocation.items() %}
+        <tr>
+          <td class="symbol-cell">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:{{ bar_colors[loop.index0 % bar_colors|length] }};margin-right:0.5rem;vertical-align:middle;"></span>
+            {{ symbol }}
+          </td>
+          <td class="num">${{ "{:,.2f}".format(alloc.market_value) }}</td>
+          <td class="num">{{ "{:.1f}".format(alloc.weight_pct) }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <!-- Performance -->
-<h2>Performance</h2>
-<div class="card">
-  <table>
-    <thead>
-      <tr>
-        <th>Symbol</th>
-        <th class="num">Total Return</th>
-        <th class="num">Annualized</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for symbol, perf in data.performance.items() %}
-      <tr>
-        <td>{{ symbol }}</td>
-        <td class="num {% if perf.total_return_pct >= 0 %}pos{% else %}neg{% endif %}">
-          {{ "{:+.2f}".format(perf.total_return_pct) }}%
-        </td>
-        <td class="num {% if perf.annualized_return_pct >= 0 %}pos{% else %}neg{% endif %}">
-          {{ "{:+.2f}".format(perf.annualized_return_pct) }}%
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div class="section">
+  <div class="section-title">Performance</div>
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th class="num">Total Return</th>
+          <th class="num">Annualized</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for symbol, perf in data.performance.items() %}
+        <tr>
+          <td class="symbol-cell">{{ symbol }}</td>
+          <td class="num">
+            <span class="{% if perf.total_return_pct >= 0 %}pos-bg{% else %}neg-bg{% endif %}">
+              {{ "{:+.2f}".format(perf.total_return_pct) }}%
+            </span>
+          </td>
+          <td class="num {% if perf.annualized_return_pct >= 0 %}pos{% else %}neg{% endif %}">
+            {{ "{:+.2f}".format(perf.annualized_return_pct) }}%
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
-<!-- Risk -->
-<h2>Risk Metrics</h2>
-<div class="card">
-  <dl class="kv">
-    <dt>Volatility (ann.)</dt>
-    <dd>{{ "{:.2f}".format(data.risk.volatility_pct) }}%</dd>
-    <dt>Sharpe Ratio</dt>
-    <dd>{{ "{:.2f}".format(data.risk.sharpe_ratio) }}</dd>
-    <dt>Max Drawdown</dt>
-    <dd class="neg">{{ "{:.2f}".format(data.risk.max_drawdown_pct) }}%</dd>
-  </dl>
-</div>
+<!-- Risk + Benchmark side by side -->
+<div class="section">
+  <div class="grid-2">
+    <!-- Risk -->
+    <div>
+      <div class="section-title">Risk Metrics</div>
+      <div class="card">
+        <div class="kv-grid" style="grid-template-columns: 1fr;">
+          <div class="kv-item">
+            <span class="kv-label">Volatility (ann.)</span>
+            <span class="kv-value">{{ "{:.2f}".format(data.risk.volatility_pct) }}%</span>
+          </div>
+          <div class="kv-item" style="margin-top:0.75rem;">
+            <span class="kv-label">Sharpe Ratio</span>
+            <span class="kv-value">{{ "{:.2f}".format(data.risk.sharpe_ratio) }}</span>
+          </div>
+          <div class="kv-item" style="margin-top:0.75rem;">
+            <span class="kv-label">Max Drawdown</span>
+            <span class="kv-value neg">{{ "{:.2f}".format(data.risk.max_drawdown_pct) }}%</span>
+          </div>
+        </div>
+      </div>
+    </div>
 
-<!-- Benchmark Comparison -->
-<h2>Benchmark Comparison</h2>
-<div class="card">
-  <dl class="kv">
-    <dt>Portfolio Return</dt>
-    <dd class="{% if data.benchmark_comparison.portfolio_return_pct >= 0 %}pos{% else %}neg{% endif %}">
-      {{ "{:+.2f}".format(data.benchmark_comparison.portfolio_return_pct) }}%
-    </dd>
-    <dt>Benchmark Return</dt>
-    <dd>{{ "{:+.2f}".format(data.benchmark_comparison.benchmark_return_pct) }}%</dd>
-    <dt>Excess Return</dt>
-    <dd class="{% if data.benchmark_comparison.excess_return_pct >= 0 %}pos{% else %}neg{% endif %}">
-      {{ "{:+.2f}".format(data.benchmark_comparison.excess_return_pct) }}%
-    </dd>
-  </dl>
+    <!-- Benchmark -->
+    <div>
+      <div class="section-title">Benchmark Comparison</div>
+      <div class="card">
+        <div class="kv-grid" style="grid-template-columns: 1fr;">
+          <div class="kv-item">
+            <span class="kv-label">Portfolio Return</span>
+            <span class="kv-value {% if data.benchmark_comparison.portfolio_return_pct >= 0 %}pos{% else %}neg{% endif %}">
+              {{ "{:+.2f}".format(data.benchmark_comparison.portfolio_return_pct) }}%
+            </span>
+          </div>
+          <div class="kv-item" style="margin-top:0.75rem;">
+            <span class="kv-label">{{ data.summary.benchmark }} Return</span>
+            <span class="kv-value">{{ "{:+.2f}".format(data.benchmark_comparison.benchmark_return_pct) }}%</span>
+          </div>
+          <div class="kv-item" style="margin-top:0.75rem;">
+            <span class="kv-label">Excess Return</span>
+            <span class="kv-value {% if data.benchmark_comparison.excess_return_pct >= 0 %}pos{% else %}neg{% endif %}">
+              {{ "{:+.2f}".format(data.benchmark_comparison.excess_return_pct) }}%
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Statistics -->
 {% if data.statistics %}
-<h2>Portfolio Statistics</h2>
-<div class="card">
-  <dl class="kv">
-    <dt>Peak Value</dt>
-    <dd>${{ "{:,.2f}".format(data.statistics.portfolio.peak_value) }}
-      <span style="color:var(--muted)">({{ data.statistics.portfolio.peak_value_date }})</span>
-    </dd>
-    <dt>Trough Value</dt>
-    <dd>${{ "{:,.2f}".format(data.statistics.portfolio.trough_value) }}
-      <span style="color:var(--muted)">({{ data.statistics.portfolio.trough_value_date }})</span>
-    </dd>
-    <dt>Best Period</dt>
-    <dd class="pos">{{ "{:+.2f}".format(data.statistics.portfolio.best_period_return_pct) }}%
-      <span style="color:var(--muted)">({{ data.statistics.portfolio.best_period_date }})</span>
-    </dd>
-    <dt>Worst Period</dt>
-    <dd class="neg">{{ "{:+.2f}".format(data.statistics.portfolio.worst_period_return_pct) }}%
-      <span style="color:var(--muted)">({{ data.statistics.portfolio.worst_period_date }})</span>
-    </dd>
-    <dt>Median Return</dt>
-    <dd>{{ "{:+.2f}".format(data.statistics.portfolio.median_return_pct) }}%</dd>
-    <dt>Positive / Negative</dt>
-    <dd>{{ data.statistics.portfolio.positive_periods }} / {{ data.statistics.portfolio.negative_periods }}</dd>
-  </dl>
+<div class="section">
+  <div class="section-title">Portfolio Statistics</div>
+  <div class="card">
+    <div class="kv-grid">
+      <div class="kv-item">
+        <span class="kv-label">Peak Value</span>
+        <span class="kv-value">${{ "{:,.2f}".format(data.statistics.portfolio.peak_value) }}</span>
+        <span class="kv-date">{{ data.statistics.portfolio.peak_value_date }}</span>
+      </div>
+      <div class="kv-item">
+        <span class="kv-label">Trough Value</span>
+        <span class="kv-value">${{ "{:,.2f}".format(data.statistics.portfolio.trough_value) }}</span>
+        <span class="kv-date">{{ data.statistics.portfolio.trough_value_date }}</span>
+      </div>
+      <div class="kv-item">
+        <span class="kv-label">Best Period</span>
+        <span class="kv-value pos">{{ "{:+.2f}".format(data.statistics.portfolio.best_period_return_pct) }}%</span>
+        <span class="kv-date">{{ data.statistics.portfolio.best_period_date }}</span>
+      </div>
+      <div class="kv-item">
+        <span class="kv-label">Worst Period</span>
+        <span class="kv-value neg">{{ "{:+.2f}".format(data.statistics.portfolio.worst_period_return_pct) }}%</span>
+        <span class="kv-date">{{ data.statistics.portfolio.worst_period_date }}</span>
+      </div>
+      <div class="kv-item">
+        <span class="kv-label">Median Return</span>
+        <span class="kv-value">{{ "{:+.2f}".format(data.statistics.portfolio.median_return_pct) }}%</span>
+      </div>
+      <div class="kv-item">
+        <span class="kv-label">Up / Down Periods</span>
+        <span class="kv-value">
+          <span class="pos">{{ data.statistics.portfolio.positive_periods }}</span>
+          /
+          <span class="neg">{{ data.statistics.portfolio.negative_periods }}</span>
+        </span>
+      </div>
+    </div>
+  </div>
 </div>
 
-<h2>Per-Holding Statistics</h2>
-<div class="card">
-  <table>
-    <thead>
-      <tr>
-        <th>Symbol</th>
-        <th class="num">Min Price</th>
-        <th class="num">Max Price</th>
-        <th class="num">Median</th>
-        <th class="num">Best</th>
-        <th class="num">Worst</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for symbol, hs in data.statistics.per_holding.items() %}
-      <tr>
-        <td>{{ symbol }}</td>
-        <td class="num">${{ "{:,.2f}".format(hs.min_price) }}</td>
-        <td class="num">${{ "{:,.2f}".format(hs.max_price) }}</td>
-        <td class="num">${{ "{:,.2f}".format(hs.median_price) }}</td>
-        <td class="num pos">{{ "{:+.2f}".format(hs.best_period_return_pct) }}%</td>
-        <td class="num neg">{{ "{:+.2f}".format(hs.worst_period_return_pct) }}%</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div class="section">
+  <div class="section-title">Per-Holding Statistics</div>
+  <div class="card" style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th class="num">Min Price</th>
+          <th class="num">Max Price</th>
+          <th class="num">Median</th>
+          <th class="num">Best Period</th>
+          <th class="num">Worst Period</th>
+          <th class="num">Std Dev</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for symbol, hs in data.statistics.per_holding.items() %}
+        <tr>
+          <td class="symbol-cell">{{ symbol }}</td>
+          <td class="num">
+            ${{ "{:,.2f}".format(hs.min_price) }}
+            <div style="font-size:0.65rem;color:var(--ink-faint);">{{ hs.min_price_date }}</div>
+          </td>
+          <td class="num">
+            ${{ "{:,.2f}".format(hs.max_price) }}
+            <div style="font-size:0.65rem;color:var(--ink-faint);">{{ hs.max_price_date }}</div>
+          </td>
+          <td class="num">${{ "{:,.2f}".format(hs.median_price) }}</td>
+          <td class="num">
+            <span class="pos-bg">{{ "{:+.2f}".format(hs.best_period_return_pct) }}%</span>
+          </td>
+          <td class="num">
+            <span class="neg-bg">{{ "{:+.2f}".format(hs.worst_period_return_pct) }}%</span>
+          </td>
+          <td class="num">{{ "{:.2f}".format(hs.return_std_pct) }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% endif %}
 

@@ -3,107 +3,194 @@
 
 {% block title %}Strategy Comparison{% endblock %}
 
-{% block content %}
-<h1>STRATEGY COMPARISON</h1>
+{% set bar_colors = ['#c45d3e', '#3b6b8a', '#4a8a7a', '#b89a6a'] %}
 
-<div class="card">
-  <dl class="kv">
-    <dt>Benchmark</dt>
-    <dd>{{ data.benchmark_symbol }} ({{ "{:+.2f}".format(data.benchmark_return_pct) }}%)</dd>
-    <dt>Strategies</dt>
-    <dd>{{ data.strategies | length }}</dd>
-  </dl>
+{% block content %}
+
+<!-- Page header -->
+<div class="page-header">
+  <h1>STRATEGY COMPARISON</h1>
+  <div class="subtitle">
+    {{ data.strategies | length }} strategies &middot;
+    Benchmark: {{ data.benchmark_symbol }}
+    ({{ "{:+.2f}".format(data.benchmark_return_pct) }}%)
+  </div>
+  <div class="accent-rule"></div>
+</div>
+
+<!-- Verdict cards -->
+<div class="section">
+  <div class="grid-2" style="margin-bottom: 2rem;">
+    <div class="verdict-card stagger">
+      <div class="verdict-label">Best Strategy</div>
+      <div class="verdict-name">{{ data.ranking[0].name }}</div>
+      <div class="verdict-stat pos">
+        {{ "{:+.2f}".format(data.ranking[0].total_return_pct) }}% return
+        &middot;
+        {{ "{:.2f}".format(data.ranking[0].sharpe_ratio) }} Sharpe
+      </div>
+    </div>
+    <div class="verdict-card stagger">
+      <div class="verdict-label">Worst Strategy</div>
+      <div class="verdict-name">{{ data.ranking[-1].name }}</div>
+      <div class="verdict-stat neg">
+        {{ "{:+.2f}".format(data.ranking[-1].total_return_pct) }}% return
+        &middot;
+        {{ "{:.2f}".format(data.ranking[-1].sharpe_ratio) }} Sharpe
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Return comparison bars -->
+<div class="section">
+  <div class="section-title">Total Return by Strategy</div>
+  <div class="card">
+    {% set max_return = data.ranking[0].total_return_pct %}
+    {% for s in data.ranking %}
+    <div style="display:flex;align-items:center;gap:1rem;{% if not loop.last %}margin-bottom:0.85rem;padding-bottom:0.85rem;border-bottom:1px solid var(--rule);{% endif %}">
+      <div style="width:130px;flex-shrink:0;">
+        <div style="font-weight:600;font-size:0.82rem;">{{ s.name }}</div>
+      </div>
+      <div style="flex:1;position:relative;">
+        <div style="height:24px;border-radius:3px;background:{{ bar_colors[loop.index0 % bar_colors|length] }};width:{{ (s.total_return_pct / max_return * 100) if max_return > 0 else 0 }}%;min-width:2px;opacity:0.85;transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'"></div>
+      </div>
+      <div style="width:80px;text-align:right;flex-shrink:0;">
+        <span class="num {% if s.total_return_pct >= 0 %}pos{% else %}neg{% endif %}" style="font-weight:600;">
+          {{ "{:+.1f}".format(s.total_return_pct) }}%
+        </span>
+      </div>
+    </div>
+    {% endfor %}
+    <!-- Benchmark reference line -->
+    <div style="margin-top:1rem;padding-top:0.75rem;border-top:1px dashed var(--rule);display:flex;align-items:center;gap:1rem;">
+      <div style="width:130px;flex-shrink:0;">
+        <div style="font-size:0.75rem;color:var(--ink-muted);font-weight:500;">{{ data.benchmark_symbol }} benchmark</div>
+      </div>
+      <div style="flex:1;"></div>
+      <div style="width:80px;text-align:right;flex-shrink:0;">
+        <span class="num" style="font-weight:600;color:var(--ink-muted);">
+          {{ "{:+.1f}".format(data.benchmark_return_pct) }}%
+        </span>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Ranking Table -->
-<h2>Ranking by Total Return</h2>
-<div class="card">
-  <table>
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Strategy</th>
-        <th class="num">Total Return</th>
-        <th class="num">Volatility</th>
-        <th class="num">Sharpe</th>
-        <th class="num">Max Drawdown</th>
-        <th class="num">Excess</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for s in data.ranking %}
-      <tr>
-        <td>{{ loop.index }}</td>
-        <td>{{ s.name }}</td>
-        <td class="num {% if s.total_return_pct >= 0 %}pos{% else %}neg{% endif %}">
-          {{ "{:+.2f}".format(s.total_return_pct) }}%
-        </td>
-        <td class="num">{{ "{:.2f}".format(s.volatility_pct) }}%</td>
-        <td class="num">{{ "{:.2f}".format(s.sharpe_ratio) }}</td>
-        <td class="num neg">{{ "{:.2f}".format(s.max_drawdown_pct) }}%</td>
-        <td class="num {% if s.excess_return_pct >= 0 %}pos{% else %}neg{% endif %}">
-          {{ "{:+.2f}".format(s.excess_return_pct) }}%
-        </td>
-        <td>
-          {% if loop.first %}<span class="badge badge-best">BEST</span>{% endif %}
-          {% if loop.last %}<span class="badge badge-worst">WORST</span>{% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div class="section">
+  <div class="section-title">Detailed Ranking</div>
+  <div class="card" style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:36px;">#</th>
+          <th>Strategy</th>
+          <th class="num">Total Return</th>
+          <th class="num">Volatility</th>
+          <th class="num">Sharpe</th>
+          <th class="num">Max Drawdown</th>
+          <th class="num">Excess vs Bench</th>
+          <th style="width:60px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in data.ranking %}
+        <tr class="{% if loop.first %}strategy-row-best{% endif %}{% if loop.last %}strategy-row-worst{% endif %}">
+          <td>
+            <span class="badge-rank {% if loop.index == 1 %}rank-1{% endif %}">{{ loop.index }}</span>
+          </td>
+          <td style="font-weight:600;">{{ s.name }}</td>
+          <td class="num">
+            <span class="{% if s.total_return_pct >= 0 %}pos-bg{% else %}neg-bg{% endif %}">
+              {{ "{:+.2f}".format(s.total_return_pct) }}%
+            </span>
+          </td>
+          <td class="num">{{ "{:.2f}".format(s.volatility_pct) }}%</td>
+          <td class="num">{{ "{:.2f}".format(s.sharpe_ratio) }}</td>
+          <td class="num neg">{{ "{:.2f}".format(s.max_drawdown_pct) }}%</td>
+          <td class="num {% if s.excess_return_pct >= 0 %}pos{% else %}neg{% endif %}">
+            {{ "{:+.2f}".format(s.excess_return_pct) }}%
+          </td>
+          <td style="text-align:right;">
+            {% if loop.first %}<span class="badge badge-best">BEST</span>{% endif %}
+            {% if loop.last %}<span class="badge badge-worst">WORST</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
-<!-- Allocation Weights -->
-<h2>Target Allocations</h2>
-<div class="card">
-  <table>
-    <thead>
-      <tr>
-        <th>Strategy</th>
-        {% set first_strategy = data.strategies[0] %}
-        {% for sym in first_strategy.weights.keys() %}
-        <th class="num">{{ sym }}</th>
+<!-- Target Allocations -->
+<div class="section">
+  <div class="section-title">Target Allocations</div>
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Strategy</th>
+          {% set first_strategy = data.strategies[0] %}
+          {% for sym in first_strategy.weights.keys() %}
+          <th class="num">{{ sym }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in data.strategies %}
+        <tr>
+          <td style="font-weight:600;">{{ s.name }}</td>
+          {% for sym, w in s.weights.items() %}
+          <td class="num">
+            {% if w > 0 %}
+            <span style="display:inline-block;width:{{ (w / 60 * 100) | int }}%;min-width:20px;height:6px;background:{{ bar_colors[loop.index0 % bar_colors|length] }};border-radius:3px;vertical-align:middle;margin-right:0.5rem;opacity:0.6;"></span>
+            {{ w }}%
+            {% else %}
+            <span style="color:var(--ink-faint);">—</span>
+            {% endif %}
+          </td>
+          {% endfor %}
+        </tr>
         {% endfor %}
-      </tr>
-    </thead>
-    <tbody>
-      {% for s in data.strategies %}
-      <tr>
-        <td>{{ s.name }}</td>
-        {% for sym, w in s.weights.items() %}
-        <td class="num">{{ w }}%</td>
-        {% endfor %}
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+      </tbody>
+    </table>
+  </div>
 </div>
 
-<!-- Beat / Underperformed -->
-<h2>Verdict</h2>
-<div class="card">
-  <dl class="kv">
-    <dt>Best Strategy</dt>
-    <dd>
-      <span class="badge badge-best">{{ data.ranking[0].name }}</span>
-      {{ "{:+.2f}".format(data.ranking[0].total_return_pct) }}% return
-    </dd>
-    <dt>Worst Strategy</dt>
-    <dd>
-      <span class="badge badge-worst">{{ data.ranking[-1].name }}</span>
-      {{ "{:+.2f}".format(data.ranking[-1].total_return_pct) }}% return
-    </dd>
-    {% if data.beat_benchmark %}
-    <dt>Beat Benchmark</dt>
-    <dd class="pos">{{ data.beat_benchmark | join(", ") }}</dd>
-    {% endif %}
-    {% if data.underperformed_benchmark %}
-    <dt>Underperformed</dt>
-    <dd class="neg">{{ data.underperformed_benchmark | join(", ") }}</dd>
-    {% endif %}
-  </dl>
+<!-- Benchmark performance -->
+<div class="section">
+  <div class="section-title">Benchmark Performance</div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="kv-grid" style="grid-template-columns: 1fr;">
+        {% if data.beat_benchmark %}
+        <div class="kv-item">
+          <span class="kv-label">Beat Benchmark</span>
+          <span class="kv-value pos" style="font-size:0.82rem;">{{ data.beat_benchmark | join(", ") }}</span>
+        </div>
+        {% endif %}
+        {% if data.underperformed_benchmark %}
+        <div class="kv-item" {% if data.beat_benchmark %}style="margin-top:0.75rem;"{% endif %}>
+          <span class="kv-label">Underperformed</span>
+          <span class="kv-value neg" style="font-size:0.82rem;">{{ data.underperformed_benchmark | join(", ") }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="kv-grid" style="grid-template-columns: 1fr;">
+        <div class="kv-item">
+          <span class="kv-label">Benchmark</span>
+          <span class="kv-value">{{ data.benchmark_symbol }}</span>
+        </div>
+        <div class="kv-item" style="margin-top:0.75rem;">
+          <span class="kv-label">Benchmark Return</span>
+          <span class="kv-value">{{ "{:+.2f}".format(data.benchmark_return_pct) }}%</span>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 {% endblock %}
