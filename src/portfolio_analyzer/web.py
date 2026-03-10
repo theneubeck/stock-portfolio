@@ -164,14 +164,14 @@ def _all_portfolios() -> list[PortfolioConfig]:
             tags=["benchmark", "commodity"],
         ),
         # ── New asset classes ──────────────────────────────
-        PortfolioConfig(
-            slug="bitcoin",
-            name="Bitcoin",
-            targets=[
-                TargetAllocation(symbol="BTC-USD", name="Bitcoin (USD)", target_weight_pct=100.0)
-            ],
-            tags=["benchmark", "crypto"],
-        ),
+        # PortfolioConfig(
+        #     slug="bitcoin",
+        #     name="Bitcoin",
+        #     targets=[
+        #         TargetAllocation(symbol="BTC-USD", name="Bitcoin (USD)", target_weight_pct=100.0)
+        #     ],
+        #     tags=["benchmark", "crypto"],
+        # ),
         PortfolioConfig(
             slug="crude-oil",
             name="Crude Oil",
