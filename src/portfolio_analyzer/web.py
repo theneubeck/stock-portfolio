@@ -163,6 +163,115 @@ def _all_portfolios() -> list[PortfolioConfig]:
             ],
             tags=["benchmark", "commodity"],
         ),
+        # ── New asset classes ──────────────────────────────
+        PortfolioConfig(
+            slug="bitcoin",
+            name="Bitcoin",
+            targets=[
+                TargetAllocation(symbol="BTC-USD", name="Bitcoin (USD)", target_weight_pct=100.0)
+            ],
+            tags=["benchmark", "crypto"],
+        ),
+        PortfolioConfig(
+            slug="crude-oil",
+            name="Crude Oil",
+            targets=[
+                TargetAllocation(symbol="CL=F", name="Crude Oil Futures", target_weight_pct=100.0)
+            ],
+            tags=["benchmark", "commodity"],
+        ),
+        PortfolioConfig(
+            slug="copper",
+            name="Copper",
+            targets=[
+                TargetAllocation(symbol="HG=F", name="Copper Futures", target_weight_pct=100.0)
+            ],
+            tags=["benchmark", "commodity"],
+        ),
+        PortfolioConfig(
+            slug="natural-gas",
+            name="Natural Gas",
+            targets=[
+                TargetAllocation(
+                    symbol="NG=F", name="Natural Gas Futures", target_weight_pct=100.0
+                )
+            ],
+            tags=["benchmark", "commodity"],
+        ),
+        PortfolioConfig(
+            slug="dax",
+            name="DAX",
+            targets=[TargetAllocation(symbol="^GDAXI", name="DAX Index", target_weight_pct=100.0)],
+            tags=["benchmark", "europe"],
+        ),
+        PortfolioConfig(
+            slug="nikkei225",
+            name="Nikkei 225",
+            targets=[
+                TargetAllocation(symbol="^N225", name="Nikkei 225 Index", target_weight_pct=100.0)
+            ],
+            tags=["benchmark", "asia"],
+        ),
+        PortfolioConfig(
+            slug="us-dollar-index",
+            name="US Dollar Index",
+            targets=[
+                TargetAllocation(
+                    symbol="DX-Y.NYB", name="US Dollar Index", target_weight_pct=100.0
+                )
+            ],
+            tags=["benchmark", "currency"],
+        ),
+        PortfolioConfig(
+            slug="eur-usd",
+            name="EUR/USD",
+            targets=[
+                TargetAllocation(
+                    symbol="EURUSD=X", name="Euro vs US Dollar", target_weight_pct=100.0
+                )
+            ],
+            tags=["benchmark", "currency"],
+        ),
+        PortfolioConfig(
+            slug="finland",
+            name="MSCI Finland",
+            targets=[
+                TargetAllocation(
+                    symbol="EFNL", name="iShares MSCI Finland ETF", target_weight_pct=100.0
+                )
+            ],
+            tags=["benchmark", "europe"],
+        ),
+        PortfolioConfig(
+            slug="denmark",
+            name="MSCI Denmark",
+            targets=[
+                TargetAllocation(
+                    symbol="EDEN", name="iShares MSCI Denmark ETF", target_weight_pct=100.0
+                )
+            ],
+            tags=["benchmark", "europe"],
+        ),
+        PortfolioConfig(
+            slug="norway",
+            name="MSCI Norway",
+            targets=[
+                TargetAllocation(
+                    symbol="ENOR", name="iShares MSCI Norway ETF", target_weight_pct=100.0
+                )
+            ],
+            tags=["benchmark", "europe"],
+        ),
+        PortfolioConfig(
+            slug="small-cap-us",
+            name="US Small Cap (Russell 2000)",
+            targets=[
+                TargetAllocation(
+                    symbol="IWM", name="iShares Russell 2000 ETF", target_weight_pct=100.0
+                )
+            ],
+            tags=["benchmark", "us"],
+        ),
         # ── Strategy portfolios ───────────────────────────
         PortfolioConfig(
             slug="equal-weight",

@@ -38,7 +38,13 @@ def fetch_prices(
         if hist.empty:
             msg = f"No price data returned for symbol '{symbol}'"
             raise ValueError(msg)
-        raw[symbol] = hist["Close"]
+        series: pd.Series = hist["Close"]
+        # Normalize timezone: strip tz so all series share naive UTC dates.
+        # yfinance returns different tz for different asset classes
+        # (e.g. UTC for crypto, America/New_York for US equities).
+        if hasattr(series.index, "tz") and series.index.tz is not None:
+            series = series.tz_localize(None)
+        raw[symbol] = series
 
     if not align or len(raw) <= 1:
         return raw
