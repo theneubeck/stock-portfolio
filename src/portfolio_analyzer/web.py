@@ -126,8 +126,53 @@ def _all_portfolios() -> list[PortfolioConfig]:
         PortfolioConfig(
             slug="gold",
             name="Gold",
-            holdings=[Holding(symbol="GLD", shares=100, name="SPDR Gold Shares")],
+            holdings=[
+                Holding(symbol="GLD", shares=100, name="SPDR Gold Shares"),
+            ],
             tags=["benchmark", "commodity"],
+        ),
+        # ── Strategy portfolios ───────────────────────────
+        PortfolioConfig(
+            slug="equal-weight",
+            name="Equal Weight",
+            holdings=[
+                Holding(symbol="GLD", shares=25, name="SPDR Gold Shares"),
+                Holding(symbol="GSG", shares=25, name="iShares S&P GSCI Commodity ETF"),
+                Holding(symbol="ACWI", shares=25, name="iShares MSCI ACWI ETF"),
+                Holding(symbol="AGG", shares=25, name="iShares Core US Aggregate Bond ETF"),
+            ],
+            tags=["strategy"],
+        ),
+        PortfolioConfig(
+            slug="heavy-gold",
+            name="Heavy Gold",
+            holdings=[
+                Holding(symbol="GLD", shares=50, name="SPDR Gold Shares"),
+                Holding(symbol="GSG", shares=10, name="iShares S&P GSCI Commodity ETF"),
+                Holding(symbol="ACWI", shares=20, name="iShares MSCI ACWI ETF"),
+                Holding(symbol="AGG", shares=20, name="iShares Core US Aggregate Bond ETF"),
+            ],
+            tags=["strategy"],
+        ),
+        PortfolioConfig(
+            slug="stocks-and-bonds",
+            name="Stocks & Bonds",
+            holdings=[
+                Holding(symbol="ACWI", shares=60, name="iShares MSCI ACWI ETF"),
+                Holding(symbol="AGG", shares=40, name="iShares Core US Aggregate Bond ETF"),
+            ],
+            tags=["strategy"],
+        ),
+        PortfolioConfig(
+            slug="all-weather",
+            name="All Weather",
+            holdings=[
+                Holding(symbol="GLD", shares=30, name="SPDR Gold Shares"),
+                Holding(symbol="GSG", shares=15, name="iShares S&P GSCI Commodity ETF"),
+                Holding(symbol="ACWI", shares=30, name="iShares MSCI ACWI ETF"),
+                Holding(symbol="AGG", shares=25, name="iShares Core US Aggregate Bond ETF"),
+            ],
+            tags=["strategy"],
         ),
     ]
 

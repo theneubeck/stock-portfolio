@@ -13,6 +13,9 @@ Feature: Portfolio list and detail pages
     And the page should contain "Nasdaq 100"
     And the page should contain "EURO STOXX 50"
     And the page should contain "Sweden"
+    And the page should contain "Equal Weight"
+    And the page should contain "Heavy Gold"
+    And the page should contain "All Weather"
     And the page should contain "Total Return"
 
   Scenario: Portfolio detail page loads
