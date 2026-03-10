@@ -172,6 +172,7 @@ def _all_portfolios() -> list[PortfolioConfig]:
                     symbol="AGG", name="iShares Core US Aggregate Bond ETF", target_weight_pct=25.0
                 ),
             ],
+            rebalance_every_months=6,
             strategy_type="DCA & Rebalance (6mo)",
             tags=["strategy"],
         ),
@@ -190,6 +191,7 @@ def _all_portfolios() -> list[PortfolioConfig]:
                     symbol="AGG", name="iShares Core US Aggregate Bond ETF", target_weight_pct=20.0
                 ),
             ],
+            rebalance_every_months=6,
             strategy_type="DCA & Rebalance (6mo)",
             tags=["strategy"],
         ),
@@ -204,6 +206,7 @@ def _all_portfolios() -> list[PortfolioConfig]:
                     symbol="AGG", name="iShares Core US Aggregate Bond ETF", target_weight_pct=40.0
                 ),
             ],
+            rebalance_every_months=6,
             strategy_type="DCA & Rebalance (6mo)",
             tags=["strategy"],
         ),
@@ -222,6 +225,7 @@ def _all_portfolios() -> list[PortfolioConfig]:
                     symbol="AGG", name="iShares Core US Aggregate Bond ETF", target_weight_pct=25.0
                 ),
             ],
+            rebalance_every_months=6,
             strategy_type="DCA & Rebalance (6mo)",
             tags=["strategy"],
         ),
@@ -292,6 +296,7 @@ def _analyze_portfolio(cfg: PortfolioConfig) -> dict[str, Any]:
             alloc[sym] = {
                 "market_value": mv,
                 "weight_pct": (mv / total_value * 100.0) if total_value > 0 else 0.0,
+                "target_weight_pct": t.target_weight_pct,
             }
 
         # Performance of individual underlying assets

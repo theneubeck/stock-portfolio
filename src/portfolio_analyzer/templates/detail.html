@@ -71,7 +71,7 @@
       {% for symbol, alloc in data.allocation.items() %}
       <div class="alloc-legend-item">
         <div class="alloc-dot" style="background: {{ bar_colors[loop.index0 % bar_colors|length] }};"></div>
-        {{ names.get(symbol, symbol) }} ({{ symbol }}) · {{ "{:.1f}".format(alloc.weight_pct) }}%
+        {{ names.get(symbol, symbol) }} ({{ symbol }}) · {{ "{:.1f}".format(alloc.weight_pct) }}% (Target: {{ "{:.1f}".format(alloc.target_weight_pct) }}%)
       </div>
       {% endfor %}
     </div>
@@ -83,7 +83,8 @@
         <tr>
           <th>Holding</th>
           <th class="num">Market Value</th>
-          <th class="num">Weight</th>
+          <th class="num">Final Weight</th>
+          <th class="num">Target</th>
         </tr>
       </thead>
       <tbody>
@@ -96,6 +97,13 @@
           </td>
           <td class="num">${{ "{:,.2f}".format(alloc.market_value) }}</td>
           <td class="num">{{ "{:.1f}".format(alloc.weight_pct) }}%</td>
+          <td class="num" style="color: var(--ink-muted);">
+            {% if alloc.target_weight_pct is defined %}
+              {{ "{:.1f}".format(alloc.target_weight_pct) }}%
+            {% else %}
+              &mdash;
+            {% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>
